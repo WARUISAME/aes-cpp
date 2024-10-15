@@ -1,18 +1,12 @@
-#include <vector>
-#include <cstdint>
-#include <algorithm> // rotate
-#include "State.h"
-#include "Sbox.h"
-#include "GFCPoly.h"
-#include "GFPoly.h"
+#include "AES.h"
 
-#include <stdexcept>
-#include <random>
+AES::AES()
+{
+    
+}
 
-const int Nb = 4; // ƒuƒƒbƒNƒTƒCƒY
-
-// State‚ÌŠeƒoƒCƒg‚ğS-box‚Å’uŠ·
-State subBytes(const State& s){
+State AES::subBytes(const State &s)
+{
     std::vector<uint8_t> res;
     for(int c = 0; c < 4; c++){
         for(int r = 0; r < 4; r++){
@@ -22,8 +16,7 @@ State subBytes(const State& s){
     return State(res);
 }
 
-// State‚ÌŠeƒoƒCƒg‚ğ¶‚ÉƒVƒtƒg
-State shiftRows(const State& s){
+State AES::shiftRows(const State &s) {
     State res({});
 
     for(int r = 0; r < 4; r++){
@@ -34,8 +27,7 @@ State shiftRows(const State& s){
     return res;
 }
 
-// State‚ÌŠe—ñ‚É‘Î‚µ‚Ä‘½€®‘€ì‚ğs‚¤
-State mixColumns(const State& s){
+State AES::mixColumns(const State &s) {
     State res({});
     // a(x) = {03}x^3 + {01}x^2 + {01}x + {02}
     GFCPolynomial aPoly({0x02, 0x01, 0x01, 0x03});
@@ -52,8 +44,7 @@ State mixColumns(const State& s){
     return res;
 }
 
-// 32bit‚Ìƒ[ƒh‚ğ4ƒoƒCƒg‚Ì”z—ñ‚É•ÏŠ·
-std::vector<uint8_t> word2ByteArray(uint32_t word){
+std::vector<uint8_t> AES::word2ByteArray(uint32_t word) {
     std::vector<uint8_t> byteArray;
     for (int i = 0; i < 4; i++) {
         byteArray.push_back(word & 0xff);
@@ -63,8 +54,7 @@ std::vector<uint8_t> word2ByteArray(uint32_t word){
     return byteArray;
 }
 
-// 4ƒoƒCƒg‚Ì”z—ñ‚ğ32bit‚Ìƒ[ƒh‚É•ÏŠ·
-uint32_t byteArray2Word(const std::vector<uint8_t>& byteArray) {
+uint32_t AES::byteArray2Word(const std::vector<uint8_t> &byteArray) {
     uint32_t res = 0;
     for (auto it = byteArray.rbegin(); it != byteArray.rend(); ++it) {
         res <<= 8;
@@ -73,8 +63,7 @@ uint32_t byteArray2Word(const std::vector<uint8_t>& byteArray) {
     return res;
 }
 
-// State‚ÆRoundKey‚ÌXOR‰‰Z
-State addRoundKey(const State& st, const std::vector<uint32_t>& keyScheduleWords) {
+State AES::addRoundKey(const State &st, const std::vector<uint32_t> &keyScheduleWords) {
     State res({});
 
     for (int c = 0; c < 4; ++c) {
@@ -92,8 +81,7 @@ State addRoundKey(const State& st, const std::vector<uint32_t>& keyScheduleWords
     return res;
 }
 
-// 32bit‚Ìƒ[ƒh‚ÌŠeƒoƒCƒg‚ÉS-box’uŠ·
-uint32_t subWord(uint32_t word) {
+uint32_t AES::subWord(uint32_t word) {
     std::vector<uint8_t> byteArray = word2ByteArray(word);
     for (uint8_t& byte : byteArray) {
         byte = Sbox(byte);
@@ -101,15 +89,13 @@ uint32_t subWord(uint32_t word) {
     return byteArray2Word(byteArray);
 }
 
-// 32bit‚Ìƒ[ƒh‚ğ¶‚É1ƒrƒbƒgƒVƒtƒg
-uint32_t rotWord(uint32_t word) {
+uint32_t AES::rotWord(uint32_t word) {
     std::vector<uint8_t> byteArray = word2ByteArray(word);
     std::rotate(byteArray.begin(), byteArray.begin() + 1, byteArray.end());
     return byteArray2Word(byteArray);
 }
 
-// ˆÃ†‰»ƒL[‚©‚çŠeƒ‰ƒEƒ“ƒhƒL[‚ğ¶¬
-std::vector<uint32_t> keyExpansion(const std::vector<uint8_t>& key, uint8_t Nk, uint8_t Nb, uint8_t Nr) {
+std::vector<uint32_t> AES::keyExpansion(const std::vector<uint8_t> &key, uint8_t Nk, uint8_t Nb, uint8_t Nr) {
     std::vector<uint32_t> rcon(Nb * (Nr + 1) / Nk + 1);
     rcon[0] = 0;
 
@@ -136,15 +122,14 @@ std::vector<uint32_t> keyExpansion(const std::vector<uint8_t>& key, uint8_t Nk, 
     return w;
 }
 
-
-std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes, const std::vector<uint32_t>& w, uint8_t Nb, uint8_t Nr) {
-    // “ü—ÍƒoƒCƒg—ñ‚ğState‚Ì•ÏŠ·
+std::vector<uint8_t> AES::cipher(const std::vector<uint8_t> &inputBytes, const std::vector<uint32_t> &w, uint8_t Nb, uint8_t Nr) {
+    // å…¥åŠ›ãƒã‚¤ãƒˆåˆ—ã‚’Stateã®å¤‰æ›
     State st(inputBytes);
 
-    // ‰Šúƒ‰ƒEƒ“ƒhƒL[‚Ì’Ç‰Á
+    // åˆæœŸãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã®è¿½åŠ 
     st = addRoundKey(st, {w.begin(), w.begin() + Nb});
 
-	// 1ƒ‰ƒEƒ“ƒh‚©‚çNr-1ƒ‰ƒEƒ“ƒh
+	// 1ãƒ©ã‚¦ãƒ³ãƒ‰ã‹ã‚‰Nr-1ãƒ©ã‚¦ãƒ³ãƒ‰
     for (int r = 1; r < Nr; ++r) {
         st = subBytes(st);
         st = shiftRows(st);
@@ -152,7 +137,7 @@ std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes, const std::v
         st = addRoundKey(st, {w.begin() + r * Nb, w.begin() + (r + 1) * Nb});
     }
 
-    // ÅIƒ‰ƒEƒ“ƒh
+    // æœ€çµ‚ãƒ©ã‚¦ãƒ³ãƒ‰
     st = subBytes(st);
     st = shiftRows(st);
     st = addRoundKey(st, {w.begin() + Nr * Nb, w.begin() + (Nr + 1) * Nb});
@@ -160,13 +145,11 @@ std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes, const std::v
     return st.getBytes();
 }
 
-
-// Nk ƒL[‚Ìƒ[ƒh” ( 1ƒ[ƒh = 4ƒoƒCƒg )
-// Nr ƒ‰ƒEƒ“ƒh”
-// KeyExpansion: ˆÃ†‰»ƒL[‚©‚çŠeƒ‰ƒEƒ“ƒhƒL[‚ğ¶¬
-// Cipher: ˆÃ†‰»
-
-std::vector<uint8_t> encrypt(const std::vector<uint8_t>& input_bytes, const std::vector<uint8_t>& cipher_key) {
+// Nk ã‚­ãƒ¼ã®ãƒ¯ãƒ¼ãƒ‰æ•° ( 1ãƒ¯ãƒ¼ãƒ‰ = 4ãƒã‚¤ãƒˆ )
+// Nr ãƒ©ã‚¦ãƒ³ãƒ‰æ•°
+// KeyExpansion: æš—å·åŒ–ã‚­ãƒ¼ã‹ã‚‰å„ãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã‚’ç”Ÿæˆ
+// Cipher: æš—å·åŒ–
+std::vector<uint8_t> AES::encrypt(const std::vector<uint8_t> &input_bytes, const std::vector<uint8_t> &cipher_key) {
     // Figure 4. Key-Block-Round Combinations
     int Nk, Nr;
     if (cipher_key.size() == 16) { // AES-128
@@ -190,7 +173,7 @@ std::vector<uint8_t> encrypt(const std::vector<uint8_t>& input_bytes, const std:
 
 //----------Decrypt----------
 
-State invSubBytes(const State& s) {
+State AES::invSubBytes(const State &s) {
     std::vector<uint8_t> res;
     for (int c = 0; c < 4; c++) {
         for (int r = 0; r < 4; r++) {
@@ -200,7 +183,7 @@ State invSubBytes(const State& s) {
     return State(res);
 }
 
-State invShiftRows(const State& s) {
+State AES::invShiftRows(const State &s) {
     State res({});
     for (int r = 0; r < 4; r++) {
         for (int c = 0; c < 4; c++) {
@@ -210,7 +193,7 @@ State invShiftRows(const State& s) {
     return res;
 }
 
-State invMixColumns(const State& s) {
+State AES::invMixColumns(const State &s) {
     State res({});
     // a^-1(x) = {0b}x^3 + {0d}x^2 + {09}x + {0e}
     GFCPolynomial aInvPoly({ 0x0e, 0x09, 0x0d, 0x0b });
@@ -227,7 +210,7 @@ State invMixColumns(const State& s) {
     return res;
 }
 
-std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes, const std::vector<uint32_t>& w, uint8_t Nb, uint8_t Nr) {
+std::vector<uint8_t> AES::invCipher(const std::vector<uint8_t> &inputBytes, const std::vector<uint32_t> &w, uint8_t Nb, uint8_t Nr) {
     State st(inputBytes);
 
     st = addRoundKey(st, { w.begin() + Nr * Nb, w.begin() + (Nr + 1) * Nb });
@@ -246,7 +229,7 @@ std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes, const std
     return st.getBytes();
 }
 
-std::vector<uint8_t> decrypt(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key) {
+std::vector<uint8_t> AES::decrypt(const std::vector<uint8_t> &cipher_text, const std::vector<uint8_t> &cipher_key) {
     int Nk, Nr;
     if (cipher_key.size() == 16) { // AES-128
         Nk = 4;
@@ -271,17 +254,16 @@ std::vector<uint8_t> decrypt(const std::vector<uint8_t>& cipher_text, const std:
 
 //----------CBC Mode----------
 
-// Existing encrypt and decrypt functions (single block)
-std::vector<uint8_t> encrypt_block(const std::vector<uint8_t>& input_bytes, const std::vector<uint8_t>& cipher_key) {
+std::vector<uint8_t> AES::encrypt_block(const std::vector<uint8_t> &input_bytes, const std::vector<uint8_t> &cipher_key) {
     return encrypt(input_bytes, cipher_key);
 }
 
-std::vector<uint8_t> decrypt_block(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key) {
+std::vector<uint8_t> AES::decrypt_block(const std::vector<uint8_t> &cipher_text, const std::vector<uint8_t> &cipher_key) {
     return decrypt(cipher_text, cipher_key);
 }
 
 // Generate a random IV (Initialization Vector)
-std::vector<uint8_t> generate_iv() {
+std::vector<uint8_t> AES::generate_iv() {
     std::vector<uint8_t> iv(16);
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -295,7 +277,7 @@ std::vector<uint8_t> generate_iv() {
 }
 
 // XOR two vectors
-std::vector<uint8_t> xor_vectors(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) {
+std::vector<uint8_t> AES::xor_vectors(const std::vector<uint8_t> &a, const std::vector<uint8_t> &b) {
     if (a.size() != b.size()) {
         throw std::invalid_argument("Vectors must be of the same size for XOR operation");
     }
@@ -308,18 +290,18 @@ std::vector<uint8_t> xor_vectors(const std::vector<uint8_t>& a, const std::vecto
     return result;
 }
 
-// “ü—Í‚ğ16ƒoƒCƒg‚Ì”{”‚ÉƒpƒfƒBƒ“ƒO‚·‚é (PKCS7ƒpƒfƒBƒ“ƒO)
+// å…¥åŠ›ã‚’16ãƒã‚¤ãƒˆã®å€æ•°ã«ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ã™ã‚‹ (PKCS7ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°)
 // Pad the input to be a multiple of 16 bytes (PKCS7 padding)
-std::vector<uint8_t> pad_input(const std::vector<uint8_t>& input) {
+std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
     size_t padding_size = 16 - (input.size() % 16);
     std::vector<uint8_t> padded = input;
     padded.insert(padded.end(), padding_size, static_cast<uint8_t>(padding_size));
     return padded;
 }
 
-// •œ†‚µ‚½ƒeƒLƒXƒg‚©‚çƒpƒfƒBƒ“ƒO‚ğíœ
+// å¾©å·ã—ãŸãƒ†ã‚­ã‚¹ãƒˆã‹ã‚‰ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ã‚’å‰Šé™¤
 // Remove padding from the decrypted text
-std::vector<uint8_t> remove_padding(const std::vector<uint8_t>& padded_input) {
+std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t> &padded_input) {
     if (padded_input.empty()) {
         throw std::invalid_argument("Input is empty");
     }
@@ -339,7 +321,8 @@ std::vector<uint8_t> remove_padding(const std::vector<uint8_t>& padded_input) {
 }
 
 // Encrypt using CBC mode
-std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key) {
+// cipher_textã®å…ˆé ­16ãƒã‚¤ãƒˆã«IVãŒæ ¼ç´ã•ã‚Œã‚‹
+std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t> &plain_text, const std::vector<uint8_t> &cipher_key) {
     std::vector<uint8_t> iv = generate_iv();
     std::vector<uint8_t> padded_text = pad_input(plain_text);
     std::vector<uint8_t> cipher_text = iv;
@@ -357,7 +340,8 @@ std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const s
 }
 
 // Decrypt using CBC mode
-std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key) {
+// cipher_textã®å…ˆé ­16ãƒã‚¤ãƒˆã«IVãŒæ ¼ç´ã•ã‚Œã¦ã„ã‚‹ã®ã§ã€ãã‚Œã‚’å–ã‚Šå‡ºã—ã¦å¾©å·åŒ–
+std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t> &cipher_text, const std::vector<uint8_t> &cipher_key) {
     if (cipher_text.size() < 32 || cipher_text.size() % 16 != 0) {
         throw std::invalid_argument("Invalid cipher text length");
     }
@@ -377,8 +361,8 @@ std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const 
     return remove_padding(plain_text);
 }
 
-// ”CˆÓ‚ÌIV‚ğw’è‚µ‚ÄCBCƒ‚[ƒh‚ÅˆÃ†‰»
-std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key, const std::vector<uint8_t>& iv) {
+// ä»»æ„ã®IVã‚’æŒ‡å®šã—ã¦CBCãƒ¢ãƒ¼ãƒ‰ã§æš—å·åŒ–
+std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t> &plain_text, const std::vector<uint8_t> &cipher_key, const std::vector<uint8_t> &iv) {
     std::vector<uint8_t> padded_text = pad_input(plain_text);
     std::vector<uint8_t> cipher_text;
 
@@ -394,8 +378,8 @@ std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const s
     return cipher_text;
 }
 
-// ”CˆÓ‚ÌIV‚ğw’è‚µ‚ÄCBCƒ‚[ƒh‚Å•œ†‰»
-std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key, const std::vector<uint8_t>& iv) {
+// ä»»æ„ã®IVã‚’æŒ‡å®šã—ã¦CBCãƒ¢ãƒ¼ãƒ‰ã§å¾©å·åŒ–
+std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t> &cipher_text, const std::vector<uint8_t> &cipher_key, const std::vector<uint8_t> &iv) {
     if (cipher_text.size() < 32 || cipher_text.size() % 16 != 0) {
         throw std::invalid_argument("Invalid cipher text length");
     }
