@@ -1,6 +1,4 @@
-#ifndef GFPOLYNOMIAL_H
-#define GFPOLYNOMIAL_H
-
+#pragma once
 #include <iostream>
 #include <vector>
 #include <string>
@@ -27,5 +25,3 @@ private:
 void initInverse();
 
 GFPolynomial inverse(const GFPolynomial& poly);
-
-#endif // GFPOLYNOMIAL_H

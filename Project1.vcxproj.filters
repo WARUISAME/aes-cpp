@@ -18,14 +18,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\AES\AES.cpp">
+    <ClCompile Include="Source\AES\Main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Source\AES\GFPoly.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="Source\AES.cpp">
-      <Filter>update</Filter>
+    <ClCompile Include="Source\AES\AES.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AES\Sbox.cpp">
+      <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -43,9 +46,6 @@
     </ClInclude>
     <ClInclude Include="Source\AES\State.h">
       <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\AES.h">
-      <Filter>update</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

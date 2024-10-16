@@ -128,12 +128,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\AES.cpp" />
     <ClCompile Include="Source\AES\AES.cpp" />
+    <ClCompile Include="Source\AES\Main.cpp" />
     <ClCompile Include="Source\AES\GFPoly.cpp" />
+    <ClCompile Include="Source\AES\Sbox.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\AES.h" />
     <ClInclude Include="Source\AES\AES.h" />
     <ClInclude Include="Source\AES\GFCPoly.h" />
     <ClInclude Include="Source\AES\GFPoly.h" />
