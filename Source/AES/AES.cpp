@@ -388,7 +388,7 @@ std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t> &cipher_text, c
     std::vector<uint8_t> plain_text;
 
     std::vector<uint8_t> previous_block = iv;
-    for (size_t i = 16; i < cipher_text.size(); i += 16) {
+    for (size_t i = 0; i < cipher_text.size(); i += 16) {
         std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + 16);
         std::vector<uint8_t> decrypted_block = decrypt_block(block, cipher_key);
         std::vector<uint8_t> plain_block = xor_vectors(decrypted_block, previous_block);
