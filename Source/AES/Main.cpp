@@ -30,7 +30,7 @@ int main() {
     //assert(decrypted_text == plain_text);
 
     // 結果を出力
-    std::cout << "plain text: ";
+    /*std::cout << "plain text: ";
     for (auto c : plain_text) std::cout << c;
     std::cout << std::endl;
 
@@ -59,7 +59,7 @@ int main() {
 
     std::cout << "key: ";
     for (auto c : key) std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)c << ", ";
-    std::cout << std::endl;
+    std::cout << std::endl;*/
 
     plain_text = { 't', 'h', 'e', ' ', 'm', 'a', 'g', 'i', 'c', ' ', 'w', 'o', 'r', 'd', 's', ' ', 'a', 'r', 'e', ' ', 's', 'q', 'u', 'e', 'a', 'm', 'i', 's', 'h', ' ', 'o', 's', 's', 'i', 'f', 'r', 'a', 'g', 'e', ' ', 'T', 'o', ' ', 'k', 'n', 'o', 'w', ' ', 'i', 's', ' ', 't', 'o', ' ', 'k', 'n', 'o', 'w', ' ', 't', 'h', 'a', 't', ' ', 'y', 'o', 'u', ' ', 'k', 'n', 'o', 'w', ' ', 'n', 'o', 't', 'h', 'i', 'n', 'g', ' ', 'T', 'h', 'a', 't', ' ', 'i', 's', ' ', 't', 'h', 'e', ' ', 't', 'r', 'u', 'e', ' ', 'm', 'e', 'a', 'n', 'i', 'n', 'g', ' ', 'o', 'f', ' ', 'k', 'n', 'o', 'w', 'l', 'e', 'd', 'g', 'e' };
     cipher_text = aes->encrypt_cbc(plain_text, key256, iv);
@@ -91,6 +91,8 @@ int main() {
     for (auto c : IV) std::cout << "0x" << std::hex << std::setw(2) << std::setfill('0') << (int)c << ", ";
     std::cout << std::endl;
     */
+
+    std::cin.get();
 
     return 0;
 }

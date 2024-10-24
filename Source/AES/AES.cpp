@@ -381,13 +381,9 @@ std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t> &plain_text, co
 
 // 任意のIVを指定してCBCモードで復号化
 std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t> &cipher_text, const std::vector<uint8_t> &cipher_key, const std::vector<uint8_t> &iv) {
-    if (cipher_text.size() < 32 || cipher_text.size() % 16 != 0) {
-        throw std::invalid_argument("Invalid cipher text length");
-    }
-
     std::vector<uint8_t> plain_text;
-
     std::vector<uint8_t> previous_block = iv;
+
     for (size_t i = 0; i < cipher_text.size(); i += 16) {
         std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + 16);
         std::vector<uint8_t> decrypted_block = decrypt_block(block, cipher_key);
