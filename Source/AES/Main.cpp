@@ -77,6 +77,14 @@ int main() {
     for (auto c : decrypted_text) std::cout << c;
     std::cout << std::endl;
     
+
+    std::vector<uint8_t> ciphertextZ = aes->encryptAESNI_cbc(plain_text, key256);
+    std::vector<uint8_t> decryptedZ = aes->decryptAESNI_cbc(ciphertextZ, key256);
+    for (size_t i = 0; i < decryptedZ.size(); i++) {
+        printf("%02x ", decryptedZ[i]);
+    }
+    printf("\n");
+
     /*// 鍵の作成用 
     std::vector<uint8_t> IV(16);
     std::random_device rd;

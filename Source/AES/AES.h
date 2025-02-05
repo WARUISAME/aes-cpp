@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <random>
 
+// https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
+
 class AES {
 public:
     AES();
@@ -88,7 +90,17 @@ public:
     // 任意のIVを指定してCBCモードで復号化
     std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key, const std::vector<uint8_t>& iv);
 
+
+    // AES-NIを使用して暗号化
+    std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key);
+
+    // AES-NIを使用して複合化
+    std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key);
+
 private:
 
     const int Nb = 4; // ブロックサイズ
+    int Nk = 8;
+    int Nr = 14;
+    const uint8_t paddingSize = 16;
 };

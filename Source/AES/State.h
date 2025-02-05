@@ -3,6 +3,7 @@
 #include <string>
 #include <iomanip>
 
+// 3.4 The State
 class State {
 public:
     State(const std::vector<uint8_t>& b){
@@ -15,6 +16,15 @@ public:
         }
     }
 
+    /*
+    eq (3.3)
+
+    :param r: row 
+    :type r: int
+    :param c: column 
+    :type c: int
+    :rtype: int
+    */
     uint8_t get(int r, int c) const {
         return s[r + 4 * c];
     }

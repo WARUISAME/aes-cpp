@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "GFPoly.h"
 
+// p.12~ 4.3 Polynomials with Coefficients in GF(2^8)
 class GFCPolynomial {
 public:
     // cs[0] + cs[1] x + cs[2] x^2 + cs[3] x^3
@@ -31,7 +32,7 @@ public:
 
     GFCPolynomial operator+(const GFCPolynomial& rhs) const {
         GFCPolynomial res({});
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) { // GF(2^8) ‚Ì‘«‚µŽZ‚ðs‚¤
             res.cs[i] = this->cs[i] + rhs.cs[i];
         }
         return res;

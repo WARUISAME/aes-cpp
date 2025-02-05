@@ -1,6 +1,12 @@
 #include "Sbox.h"
 
 uint8_t Sbox(uint8_t b) {
+    /*
+    5.1.1 SubBytes() Transformation s_box
+    :param b: 1 byte integer number
+    :type b: int
+    */
+
     // 5.1.1 1. b‚ÌGF2^8‚Ì‹tŒ³‚ðŽæ‚é
     b = inverse(GFPolynomial(b)).getCoeffs();
 

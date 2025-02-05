@@ -4,6 +4,7 @@
 #include <string>
 #include <cassert>
 
+// p.10~4. Mathemaical Preliminaries(4.1, 4.2)
 class GFPolynomial {
 public:
     GFPolynomial(uint16_t c);
@@ -16,12 +17,13 @@ public:
     GFPolynomial operator*(const GFPolynomial& rhs) const;
 
 private:
-    static const uint16_t mod = 0x11b;
+    static const uint16_t mod = 0x11b; // modulo x^8 + x^4 + x^3 + x + 1
     uint8_t coeffs;
 
     uint16_t bitLength(uint16_t n) const;
 };
 
+// æ–@“I‹tŒ³‚ÌŒvZ
 void initInverse();
 
 GFPolynomial inverse(const GFPolynomial& poly);

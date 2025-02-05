@@ -82,6 +82,12 @@ State AES::addRoundKey(const State &st, const std::vector<uint32_t> &keySchedule
     return res;
 }
 
+/*
+5.3 Key Expansion SubWord() p.19. word -> [sbox(a0),sbox(a1),sbox(a2),sbox(a3)] -> sub_word
+:param word: 1 word integer
+:type word: int
+:rtype: int
+*/
 uint32_t AES::subWord(uint32_t word) {
     std::vector<uint8_t> byteArray = word2ByteArray(word);
     for (uint8_t& byte : byteArray) {
@@ -90,6 +96,12 @@ uint32_t AES::subWord(uint32_t word) {
     return byteArray2Word(byteArray);
 }
 
+/*
+5.3 Key Expasion RotWord. [a0, a1, a2, a3] -> [a1, a2, a3, a0]
+:param word: 1 word integer
+:type word: int
+:rtype: int
+*/
 uint32_t AES::rotWord(uint32_t word) {
     std::vector<uint8_t> byteArray = word2ByteArray(word);
     std::rotate(byteArray.begin(), byteArray.begin() + 1, byteArray.end());
@@ -390,6 +402,68 @@ std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t> &cipher_text, c
         std::vector<uint8_t> plain_block = xor_vectors(decrypted_block, previous_block);
         plain_text.insert(plain_text.end(), plain_block.begin(), plain_block.end());
         previous_block = block;
+    }
+
+    return remove_padding(plain_text);
+}
+
+
+
+#include <immintrin.h>
+// AES-NIを使用して暗号化
+std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key) {
+    // IVを生成する
+    std::vector<uint8_t> iv = generate_iv();
+    std::vector<uint8_t> padded_text = pad_input(plain_text);
+    // 暗号文の最初にIVを追加
+    std::vector<uint8_t> cipher_text = iv;
+
+    __m128i previous_block = _mm_loadu_si128((const __m128i*)iv.data());
+    std::vector<uint32_t> w = keyExpansion(cipher_key, Nk, Nb, Nr); // ラウンドキーの生成
+    for (size_t i = 0; i < padded_text.size(); i += paddingSize) {
+        std::vector<uint8_t> block(padded_text.begin() + i, padded_text.begin() + i + paddingSize);
+        __m128i block_m128 = _mm_loadu_si128((const __m128i*)block.data());
+        // XOR 演算
+        block_m128 = _mm_xor_si128(block_m128, previous_block);
+        // AES 暗号化ラウンド
+        __m128i roundKey = _mm_loadu_si128((const __m128i*) & w[0]);
+        block_m128 = _mm_xor_si128(block_m128, roundKey);
+        for (int r = 1; r < Nr; r++) {
+            roundKey = _mm_loadu_si128((const __m128i*) & w[r * Nb]);
+            block_m128 = _mm_aesenc_si128(block_m128, roundKey);
+        }
+        roundKey = _mm_loadu_si128((const __m128i*) & w[Nr * Nb]);
+        block_m128 = _mm_aesenclast_si128(block_m128, roundKey);
+        _mm_storeu_si128((__m128i*)block.data(), block_m128);
+        cipher_text.insert(cipher_text.end(), block.begin(), block.end());
+        previous_block = block_m128;
+    }
+    return cipher_text;
+}
+
+// AES-NIを使用してCBCモードで復号化
+std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key) {
+    std::vector<uint8_t> iv(cipher_text.begin(), cipher_text.begin() + paddingSize);
+    std::vector<uint8_t> plain_text;
+
+    __m128i previous_block = _mm_loadu_si128((const __m128i*)iv.data());
+    std::vector<uint32_t> w = keyExpansion(cipher_key, Nk, Nb, Nr); // ラウンドキーの生成
+    for (size_t i = paddingSize; i < cipher_text.size(); i += paddingSize) {
+        std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + paddingSize);
+        __m128i block_m128 = _mm_loadu_si128((const __m128i*)block.data());
+        // AES 復号化ラウンド
+        __m128i roundKey = _mm_loadu_si128((const __m128i*) & w[Nr * Nb]);
+        for (int r = Nr - 1; r > 0; r--) {
+            roundKey = _mm_loadu_si128((const __m128i*) & w[r * Nb]);
+            block_m128 = _mm_aesdec_si128(block_m128, roundKey);
+        }
+        roundKey = _mm_loadu_si128((const __m128i*) & w[0]);
+        block_m128 = _mm_aesdeclast_si128(block_m128, _mm_loadu_si128((const __m128i*)(cipher_key.data())));
+        // XOR 演算
+        block_m128 = _mm_xor_si128(block_m128, previous_block);
+        _mm_storeu_si128((__m128i*)block.data(), block_m128);
+        plain_text.insert(plain_text.end(), block.begin(), block.end());
+        previous_block = _mm_loadu_si128((const __m128i*)(cipher_text.data() + i));
     }
 
     return remove_padding(plain_text);
