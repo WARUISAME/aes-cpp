@@ -10,11 +10,16 @@
 #include <stdexcept>
 #include <random>
 
+#include <immintrin.h> // AES-NI
+#include <wmmintrin.h>
+#include <intrin.h>
+#include <cstring>
+
 // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
 
 class AES {
 public:
-    AES();
+    AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag);
 
     // Stateの各バイトをS-boxで置換
     State subBytes(const State& s);
@@ -79,28 +84,60 @@ public:
     std::vector<uint8_t> remove_padding(const std::vector<uint8_t>& padded_input);
 
     // Encrypt using CBC mode
-    std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key);
+    std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text);
 
     // Decrypt using CBC mode
-    std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key);
-
-    // 任意のIVを指定してCBCモードで暗号化
-    std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key, const std::vector<uint8_t>& iv);
-
-    // 任意のIVを指定してCBCモードで復号化
-    std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key, const std::vector<uint8_t>& iv);
+    std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text);
 
 
     // AES-NIを使用して暗号化
-    std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plain_text, const std::vector<uint8_t>& cipher_key);
+    std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plain_text);
 
     // AES-NIを使用して複合化
-    std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text, const std::vector<uint8_t>& cipher_key);
+    std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text);
+
+    // AES-NIがCPUにあるのか判定するプログラム
+    bool check_aesni_support(const bool aesniflag);
 
 private:
 
+    // 暗号キー
+    std::vector<uint8_t> key;
+
     const int Nb = 4; // ブロックサイズ
-    int Nk = 8;
-    int Nr = 14;
+
+    // 暗号化キーの長さとラウンド数
+    int Nk = 0;
+    int Nr = 0;
+
+    // AES-NIがサポートされているか true: サポートされている false: サポートされていない
+    bool aesniSupported = false;
+
+    const uint8_t AES_128 = 16;
+    const uint8_t AES_192 = 24;
+    const uint8_t AES_256 = 32;
+
+    const uint8_t ivSize = 16;
+
     const uint8_t paddingSize = 16;
+
+    std::vector<__m128i> rd_key;
+    std::vector<__m128i> dec_key;
+
+private:
+    __m128i encrypt_block(__m128i block) const {
+        block = _mm_xor_si128(block, rd_key[0]);
+        for (size_t i = 1; i < Nr; ++i) {
+            block = _mm_aesenc_si128(block, rd_key[i]);
+        }
+        return _mm_aesenclast_si128(block, rd_key[Nr]);
+    }
+
+    __m128i decrypt_block(__m128i block) const {
+        block = _mm_xor_si128(block, dec_key[0]);
+        for (size_t i = 1; i < Nr; ++i) {
+            block = _mm_aesdec_si128(block, dec_key[i]);
+        }
+        return _mm_aesdeclast_si128(block, dec_key[Nr]);
+    }
 };
