@@ -170,7 +170,7 @@ uint32_t AES::rotWord(uint32_t word) {
 }
 
 std::vector<uint32_t> AES::keyExpansion(const std::vector<uint8_t>& key, uint8_t Nk, uint8_t Nb, uint8_t Nr) {
-    // Rconの正しい生成
+    // Round contants : 5.2 KeyExpansion Table 5 p.17
     std::vector<uint8_t> rcon = {
         0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36
     };
@@ -201,12 +201,15 @@ std::vector<uint32_t> AES::keyExpansion(const std::vector<uint8_t>& key, uint8_t
         w[i] = w[i - Nk] ^ temp;
     }
 
+
     // デバッグ出力（最初と最後のラウンドキー）
+#ifdef _DEBUG
     std::cout << "First round key: ";
     for (int i = 0; i < 4; ++i) printf("%08x ", w[i]);
     std::cout << "\nLast round key: ";
     for (int i = w.size() - 4; i < w.size(); ++i) printf("%08x ", w[i]);
     std::cout << "\n";
+#endif
 
     return w;
 }
@@ -387,11 +390,13 @@ std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
     padded.insert(padded.end(), padding_size, static_cast<uint8_t>(padding_size));
 
     // デバッグ出力
+#ifdef _DEBUG
     std::cout << "Padding added: " << static_cast<int>(padding_size)
         << " bytes\nPadded data:\n";
     for (size_t i = 0; i < padded.size(); ++i) {
         printf("%02x%c", padded[i], ((i + 1) % 16 == 0) ? '\n' : ' ');
     }
+#endif
     return padded;
 }
 
@@ -411,6 +416,7 @@ std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_inpu
     const size_t padding_start = padded_input.size() - padding_value;
 
     // デバッグ情報出力
+#ifdef _DEBUG
     std::cerr << "Padding value detected: " << static_cast<int>(padding_value)
         << "\nLast 16 bytes:\n";
     for (size_t i = (padded_input.size() < 16) ? 0 : padded_input.size() - 16;
@@ -422,6 +428,7 @@ std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_inpu
             throw std::invalid_argument("Padding byte mismatch");
         }
     }
+#endif
 
     return std::vector<uint8_t>(
         padded_input.begin(),
