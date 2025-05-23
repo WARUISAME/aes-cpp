@@ -556,9 +556,24 @@ std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_te
 // 引数のフラグは任意でAES-NIを使用するかのフラグで、
 // trueの場合でもCPUがAES-NIをサポートしていない場合はfalseを返します
 bool AES::check_aesni_support(const bool aesniflag) {
+    if (!aesniflag) {
+        return false;
+    }
+
+#if defined(_MSC_VER))
     int cpuInfo[4] = { 0 };
     __cpuid(cpuInfo, 1);
-
-    // ECXレジスタの25ビット目がAES-NIのサポートを示します
-    return ((cpuInfo[2] & (1 << 25)) != 0) && aesniflag;
+    // ECXレジスタの25ビット目がAES-NIのサポートを示します ( (1 << 25) は 0x02000000 )
+    return (cpuInfo[2] & (1 << 25)) != 0;
+#elif (defined(__GNUC__))
+    unsigned int eax = 1, ebx = 0, ecx = 0, edx = 0; // eaxにfunction_id = 1 をセット
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
+        // ECXレジスタの25ビット目がAES-NIのサポートを示します
+        return (ecx & (1 << 25)) != 0;
+    }
+    return false; // __get_cpuid が失敗した場合 (またはサポートされていない場合)
+#else
+    // 上記以外のコンパイラやプラットフォームでは、AES-NIはサポートされていないと判断
+    return false;
+#endif
 }

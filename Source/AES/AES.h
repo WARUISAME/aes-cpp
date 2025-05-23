@@ -12,7 +12,14 @@
 
 #include <immintrin.h> // AES-NI
 #include <wmmintrin.h>
-#include <intrin.h>
+
+// AES-NIがサポートされているかどうかを確認するためのヘッダー
+#if defined(_MSC_VER)
+    #include <intrin.h>
+#elif defined(__GNUC__)
+    #include <cpuid.h>
+#endif
+
 #include <cstring>
 
 // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
