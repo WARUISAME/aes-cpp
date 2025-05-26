@@ -560,7 +560,7 @@ bool AES::check_aesni_support(const bool aesniflag) {
         return false;
     }
 
-#if defined(_MSC_VER))
+#if defined(_MSC_VER)
     int cpuInfo[4] = { 0 };
     __cpuid(cpuInfo, 1);
     // ECXレジスタの25ビット目がAES-NIのサポートを示します ( (1 << 25) は 0x02000000 )
