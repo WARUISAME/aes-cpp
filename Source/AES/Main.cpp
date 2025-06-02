@@ -166,8 +166,53 @@ int main() {
     };
 
     // AES-NIを使用して暗号・復号化
-    AES aes(key,true);
+    //AES aes(key,true);
 
+    // テストケース 1: 提供されたコードのキーと平文
+    std::vector<uint8_t> key1(32, 0x77);
+    std::string plaintext1 = "Testing with a 256-bit key.";
+    std::cout << "TEST CASE 1:" << std::endl;
+    std::cout << "PlainText: " << plaintext1 << std::endl;
+    AES aes1(key1, false);
+    AES aes1n(key1, true);
+    std::vector<uint8_t> plaintext_bytes1(plaintext1.begin(), plaintext1.end());
+    std::cout << "SOFT ENCRYPT" << std::endl;
+    auto cipher1 = aes1.encrypt_cbc(plaintext_bytes1);
+    std::cout << "AES-NI ENCRYPT" << std::endl;
+    auto cipher1n = aes1n.encrypt_cbc(plaintext_bytes1);
+
+    std::cout << "SOFT DECRYPT" << std::endl;
+    auto decrypted1 = aes1.decrypt_cbc(cipher1);
+    std::cout << "AES-NI DECRYPT" << std::endl;
+    auto decrypted1n = aes1n.decrypt_cbc(cipher1n);
+
+    std::cout << "AES-NI TO SOFT DECRYPT" << std::endl;
+    auto decrypted1_n = aes1.decrypt_cbc(cipher1n);
+    std::cout << "SOFT TO AES-NI DECRYPT" << std::endl;
+    auto decrypted1n_1 = aes1n.decrypt_cbc(cipher1);
+
+    std::string recovered1(
+        reinterpret_cast<const char*>(decrypted1.data()),
+        decrypted1.size());
+    std::string recovered1n(
+        reinterpret_cast<const char*>(decrypted1n.data()),
+        decrypted1n.size());
+
+    std::string recovered1_n(
+        reinterpret_cast<const char*>(decrypted1_n.data()),
+        decrypted1_n.size());
+    std::string recovered1n_1(
+        reinterpret_cast<const char*>(decrypted1n_1.data()),
+        decrypted1n_1.size());
+
+    std::cout << "SoftWare Decrypt: " << recovered1 << "\n";
+    std::cout << "AES-NI Decrypt: " << recovered1n << "\n";
+
+    std::cout << "SoftWare To AES-NI Decrypt: " << recovered1_n << std::endl;
+    std::cout << "AES-NI To SoftWare Decrypt: " << recovered1n_1 << std::endl;
+    for (auto c : cipher1) std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)c << " ";
+
+    /*
     // 暗号化
     std::string plaintext = "Secret message";
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
@@ -182,18 +227,30 @@ int main() {
     std::cout << "Original: " << plaintext << "\n";
     std::cout << "Recovered: " << recovered << "\n";
 
-    AES aes2(key, false);
+    std::cout << "============================" << std::endl;
+
+    AES aes2(key, true);
 
     auto cipher2 = aes2.encrypt_cbc(plaintext_bytes);
 
-    auto decrypted2 = aes2.decrypt_cbc(cipher2);
+    std::vector<uint8_t> test = { 0xcc, 0xe9, 0x8f, 0xb3, 0xee, 0xeb, 0x8d, 0x45,
+    0x54, 0x0d, 0x27, 0xc5, 0x3f, 0x63, 0xdc, 0x67,
+    0x99, 0x52, 0xdd, 0x7c, 0xb2, 0x00, 0xe0, 0xff,
+    0xe0, 0x72, 0x1c, 0x66, 0x39, 0x5e, 0x3a, 0x30,
+    0x11, 0x99, 0x8c, 0xe8, 0xa9, 0x18, 0x0d, 0x71,
+    0x7e, 0x64, 0xd8, 0xd8, 0x8d, 0xb2, 0x0c, 0xe8,
+    0x74, 0x81, 0xdf, 0x2e, 0x38, 0x52, 0x46, 0xab,
+    0xb6, 0x10, 0xb4, 0xed, 0xb2, 0x67, 0x7e, 0x97
+    };
+
+    auto decrypted2 = aes2.decrypt_cbc(cipher);
     std::string recovered2(
         reinterpret_cast<const char*>(decrypted2.data()),
         decrypted2.size());
 
     std::cout << "Original: " << plaintext << "\n";
     std::cout << "Recovered: " << recovered2 << "\n";
-
+    */
     std::cin.get();
 
     return 0;

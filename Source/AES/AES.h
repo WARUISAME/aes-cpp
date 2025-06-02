@@ -147,4 +147,7 @@ private:
         }
         return _mm_aesdeclast_si128(block, dec_key[Nr]);
     }
+
+    inline __m128i AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2);
+    void AESNI128KeyExpansion(__m128i* roundKeys_m128i, int Nr);
 };
