@@ -7,6 +7,10 @@ add_library(AES_Library STATIC
     Sbox.cpp
 )
 
+target_compile_definitions(AES_Library PRIVATE
+    $<$<CONFIG:Debug>:_DEBUG>
+)
+
 # インクルードディレクトリを追加
 target_include_directories(AES_Library PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR} # AES ディレクトリ (AES.h など)
