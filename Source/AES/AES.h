@@ -149,5 +149,5 @@ private:
     }
 
     inline __m128i AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2);
-    void AESNI128KeyExpansion(__m128i* roundKeys_m128i, int Nr);
+    inline void AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3);
 };

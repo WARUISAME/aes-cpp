@@ -7,6 +7,9 @@ add_library(AES_Library STATIC
     Sbox.cpp
 )
 
+# コンパイルオプション
+target_compile_options(AES_Library PRIVATE -Wno-ignored-attributes)
+
 target_compile_definitions(AES_Library PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
