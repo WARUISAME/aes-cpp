@@ -51,4 +51,7 @@
   <ItemGroup>
     <Text Include="Source\AES\CMakeLists.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="LICENSE" />
+  </ItemGroup>
 </Project>
