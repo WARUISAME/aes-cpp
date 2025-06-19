@@ -12,7 +12,7 @@
 
 #include <immintrin.h> // AES-NI
 #include <wmmintrin.h>
-#include <immintrin.h>
+
 // AES-NIがサポートされているかどうかを確認するためのヘッダー
 #if defined(_MSC_VER)
     #include <intrin.h>
