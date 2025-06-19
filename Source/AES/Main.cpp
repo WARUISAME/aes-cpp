@@ -6,7 +6,7 @@
 #include <memory>
 
 //void test_roundtrip(const std::string& test_name, const std::vector<uint8_t>& data) {
-//    std::vector<uint8_t> key(16, 0x55); // AES-128ã‚­ãƒ¼
+//    std::vector<uint8_t> key(16, 0x55); // AES-128ƒL[
 //    AES aes(key);
 //
 //    try {
@@ -27,7 +27,7 @@
 //}
 //
 //void test_known_vector() {
-//    // NISTãƒ†ã‚¹ãƒˆãƒ™ã‚¯ã‚¿ï¼ˆä¾‹ï¼‰
+//    // NISTƒeƒXƒgƒxƒNƒ^i—áj
 //    std::vector<uint8_t> key = { 0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,
 //                               0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c };
 //    std::vector<uint8_t> plain = { 'H','e','l','l','o',' ','W','o','r','l','d','!','!','!','!','!' };
@@ -49,16 +49,16 @@
 //    AES aes(key);
 //
 //    std::vector<uint32_t> w = aes.keyExpansion(key, 4, 4, 10);
-//    assert(w[40] == 0xd014f9a8); // æœ€çµ‚ãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã®æ¤œè¨¼
+//    assert(w[40] == 0xd014f9a8); // ÅIƒ‰ƒEƒ“ƒhƒL[‚ÌŒŸØ
 //}
 
 int main() {
-    // éµã®å¤§ãã•ã«ã‚ˆã£ã¦å¼·åº¦ãŒå¤‰ã‚ã‚‹ã€‚
-    // 128bitéµã¯16byte
-    // 192bitéµã¯24byte
-    // 256bitéµã¯32byte
+    // Œ®‚Ì‘å‚«‚³‚É‚æ‚Á‚Ä‹­“x‚ª•Ï‚í‚éB
+    // 128bitŒ®‚Í16byte
+    // 192bitŒ®‚Í24byte
+    // 256bitŒ®‚Í32byte
 
-    // éµã¨å¹³æ–‡ã‚’å®šç¾©
+    // Œ®‚Æ•½•¶‚ğ’è‹`
     //std::vector<uint8_t> key = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
     //std::vector<uint8_t> iv = {0xf4, 0x87, 0xe6, 0xd6, 0xde, 0xaa, 0xc8, 0xff, 0x95, 0x50, 0x87, 0xb8, 0x87, 0x53, 0xf9, 0xba};
     //std::vector<uint8_t> plain_text = {'I', ' ', 'a', 'm', ' ', 'k', 'u', 'r', 'e', 'n', 'a', 'i', 'f', '!', '!', '!'};
@@ -67,16 +67,16 @@ int main() {
 
     //std::unique_ptr<AES> aes = std::make_unique<AES>(key256);
 
-    //// AESæš—å·åŒ–
+    //// AESˆÃ†‰»
     //std::vector<uint8_t> cipher_text = aes->encrypt(plain_text, key);
 
-    //// AESå¾©å·åŒ–
+    //// AES•œ†‰»
     //std::vector<uint8_t> decrypted_text = aes->decrypt(cipher_text, key);
 
-    // å¹³æ–‡ã¨ä¸€è‡´ã™ã‚‹ã‹ç¢ºèª
+    // •½•¶‚Æˆê’v‚·‚é‚©Šm”F
     //assert(decrypted_text == plain_text);
 
-    // çµæœã‚’å‡ºåŠ›
+    // Œ‹‰Ê‚ğo—Í
     /*std::cout << "plain text: ";
     for (auto c : plain_text) std::cout << c;
     std::cout << std::endl;
@@ -128,7 +128,7 @@ int main() {
     //test_key_expansion();
     //test_known_vector();
 
-    //// ãƒ†ã‚¹ãƒˆã‚±ãƒ¼ã‚¹å®Ÿè¡Œä¾‹
+    //// ƒeƒXƒgƒP[ƒXÀs—á
     //test_roundtrip("Empty vector", {});
     //test_roundtrip("15-byte data", { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 });
     //test_roundtrip("16-byte data", std::vector<uint8_t>(16, 0xff));
@@ -142,7 +142,7 @@ int main() {
     }
     printf("\n");*/
 
-    /*// éµã®ä½œæˆç”¨ 
+    /*// Œ®‚Ìì¬—p 
     std::vector<uint8_t> IV(16);
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -165,10 +165,10 @@ int main() {
         0x2d,0x98,0x10,0xa3,0x09,0x14,0xdf,0xf4
     };
 
-    // AES-NIã‚’ä½¿ç”¨ã—ã¦æš—å·ãƒ»å¾©å·åŒ–
+    // AES-NI‚ğg—p‚µ‚ÄˆÃ†E•œ†‰»
     //AES aes(key,true);
 
-    // ãƒ†ã‚¹ãƒˆã‚±ãƒ¼ã‚¹ 1: æä¾›ã•ã‚ŒãŸã‚³ãƒ¼ãƒ‰ã®ã‚­ãƒ¼ã¨å¹³æ–‡
+    // ƒeƒXƒgƒP[ƒX 1: ’ñ‹Ÿ‚³‚ê‚½ƒR[ƒh‚ÌƒL[‚Æ•½•¶
     std::vector<uint8_t> key1(32, 0x77);
     std::string plaintext1 = "Testing with a 256-bit key.";
     std::cout << "TEST CASE 1:" << std::endl;
@@ -213,12 +213,12 @@ int main() {
     for (auto c : cipher1) std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)c << " ";
 
     /*
-    // æš—å·åŒ–
+    // ˆÃ†‰»
     std::string plaintext = "Secret message";
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
     auto cipher = aes.encrypt_cbc(plaintext_bytes);
 
-    // å¾©å·
+    // •œ†
     auto decrypted = aes.decrypt_cbc(cipher);
     std::string recovered(
         reinterpret_cast<const char*>(decrypted.data()),

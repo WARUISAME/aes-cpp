@@ -13,7 +13,7 @@
 #include <immintrin.h> // AES-NI
 #include <wmmintrin.h>
 #include <immintrin.h>
-// AES-NIãŒã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹ã‚’ç¢ºèªã™ã‚‹ãŸã‚ã®ãƒ˜ãƒƒãƒ€ãƒ¼
+// AES-NI‚ªƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚é‚©‚Ç‚¤‚©‚ğŠm”F‚·‚é‚½‚ß‚Ìƒwƒbƒ_[
 #if defined(_MSC_VER)
     #include <intrin.h>
 #elif defined(__GNUC__)
@@ -35,64 +35,64 @@ public:
     std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text);
 
 private:
-    // --- ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢å®Ÿè£…ã®é–¢æ•° ---
+    // --- ƒ\ƒtƒgƒEƒFƒAÀ‘•‚ÌŠÖ” ---
     
-    // Stateã®å„ãƒã‚¤ãƒˆã‚’S-boxã§ç½®æ›
+    // State‚ÌŠeƒoƒCƒg‚ğS-box‚Å’uŠ·
     State subBytes(const State& s);
 
-    // Stateã®å„ãƒã‚¤ãƒˆã‚’å·¦ã«ã‚·ãƒ•ãƒˆ
+    // State‚ÌŠeƒoƒCƒg‚ğ¶‚ÉƒVƒtƒg
     State shiftRows(const State& s);
 
-    // Stateã®å„åˆ—ã«å¯¾ã—ã¦å¤šé …å¼æ“ä½œã‚’è¡Œã†
+    // State‚ÌŠe—ñ‚É‘Î‚µ‚Ä‘½€®‘€ì‚ğs‚¤
     State mixColumns(const State& s);
 
-    // ubBytesã®é€†å¤‰æ›
+    // ubBytes‚Ì‹t•ÏŠ·
     State invSubBytes(const State& s);
 
-    // shiftRowsã®é€†å¤‰æ›
+    // shiftRows‚Ì‹t•ÏŠ·
     State invShiftRows(const State& s);
 
-    // mixColumnsã®é€†å¤‰æ›
+    // mixColumns‚Ì‹t•ÏŠ·
     State invMixColumns(const State& s);
 
-    // Stateã¨RoundKeyã®XORæ¼”ç®—
+    // State‚ÆRoundKey‚ÌXOR‰‰Z
     State addRoundKey(const State& st, const std::vector<uint32_t>& keyScheduleWords);
     
-    // 32bitã®ãƒ¯ãƒ¼ãƒ‰ã®å„ãƒã‚¤ãƒˆã«S-boxç½®æ›
+    // 32bit‚Ìƒ[ƒh‚ÌŠeƒoƒCƒg‚ÉS-box’uŠ·
     uint32_t subWord(uint32_t word);
 
-    // 32bitã®ãƒ¯ãƒ¼ãƒ‰ã‚’1ãƒã‚¤ãƒˆå·¦ã«ã‚·ãƒ•ãƒˆ
+    // 32bit‚Ìƒ[ƒh‚ğ1ƒoƒCƒg¶‚ÉƒVƒtƒg
     uint32_t rotWord(uint32_t word);
 
-    // æš—å·åŒ–ã‚­ãƒ¼ã‹ã‚‰å„ãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã‚’ç”Ÿæˆ
+    // ˆÃ†‰»ƒL[‚©‚çŠeƒ‰ƒEƒ“ƒhƒL[‚ğ¶¬
     std::vector<uint32_t> keyExpansion();
 
     std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes);
 
     std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes);
 
-    // æš—å·åŒ–
+    // ˆÃ†‰»
     std::vector<uint8_t> encrypt(const std::vector<uint8_t>& input_bytes);
 
-    // å¾©å·åŒ–
+    // •œ†‰»
     std::vector<uint8_t> decrypt(const std::vector<uint8_t>& cipher_text);
 
-    // --- AES-NIå®Ÿè£…ã®é–¢æ•° ---
+    // --- AES-NIÀ‘•‚ÌŠÖ” ---
     
-    // AES-NIã‚’ä½¿ç”¨ã—ã¦CBCãƒ¢ãƒ¼ãƒ‰ã§æš—å·åŒ–
+    // AES-NI‚ğg—p‚µ‚ÄCBCƒ‚[ƒh‚ÅˆÃ†‰»
     std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plain_text);
-    // AES-NIã‚’ä½¿ç”¨ã—ã¦CBCãƒ¢ãƒ¼ãƒ‰ã§å¾©å·åŒ–
+    // AES-NI‚ğg—p‚µ‚ÄCBCƒ‚[ƒh‚Å•œ†‰»
     std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text);
 
     __m128i encrypt_block(__m128i block) const;
     __m128i decrypt_block(__m128i block) const;
 
-    // AES-128 ã®ã‚­ãƒ¼æ‹¡å¼µç”¨
+    // AES-128 ‚ÌƒL[Šg’£—p
     inline __m128i AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2);
-    // AES-192 ã®ã‚­ãƒ¼æ‹¡å¼µç”¨
+    // AES-192 ‚ÌƒL[Šg’£—p
     inline void AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3);
 
-    // --- å…±é€šã®é–¢æ•° ---
+    // --- ‹¤’Ê‚ÌŠÖ” ---
     
     // Generate a random IV (Initialization Vector)
     std::vector<uint8_t> generate_iv();
@@ -106,35 +106,35 @@ private:
     // Remove padding from the decrypted text
     std::vector<uint8_t> remove_padding(const std::vector<uint8_t>& padded_input);
 
-    // 32bitã®ãƒ¯ãƒ¼ãƒ‰ã‚’4ãƒã‚¤ãƒˆã®é…åˆ—ã«å¤‰æ›
+    // 32bit‚Ìƒ[ƒh‚ğ4ƒoƒCƒg‚Ì”z—ñ‚É•ÏŠ·
     std::vector<uint8_t> word2ByteArray(uint32_t word);
 
-    // 4ãƒã‚¤ãƒˆã®é…åˆ—ã‚’32bitã®ãƒ¯ãƒ¼ãƒ‰ã«å¤‰æ›
+    // 4ƒoƒCƒg‚Ì”z—ñ‚ğ32bit‚Ìƒ[ƒh‚É•ÏŠ·
     uint32_t byteArray2Word(const std::vector<uint8_t>& byteArray);
 
-    // AES-NIãŒCPUã«ã‚ã‚‹ã®ã‹åˆ¤å®šã™ã‚‹ãƒ—ãƒ­ã‚°ãƒ©ãƒ 
+    // AES-NI‚ªCPU‚É‚ ‚é‚Ì‚©”»’è‚·‚éƒvƒƒOƒ‰ƒ€
     bool check_aesni_support(const bool aesniflag);
 
 private:
-    // AES-NIãŒã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹ã‹ true: ã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹ false: ã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ãªã„
+    // AES-NI‚ªƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚é‚© true: ƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚é false: ƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚È‚¢
     bool aesniSupported = false;
 
     const uint8_t AES_128 = 16;
     const uint8_t AES_192 = 24;
     const uint8_t AES_256 = 32;
 
-    std::vector<uint8_t> key; // æš—å·ã‚­ãƒ¼
+    std::vector<uint8_t> key; // ˆÃ†ƒL[
 
-    const int Nb = 4; // ãƒ–ãƒ­ãƒƒã‚¯ã‚µã‚¤ã‚º (ãƒ¯ãƒ¼ãƒ‰å˜ä½)
-    int Nk = 0;       // ã‚­ãƒ¼é•· (ãƒ¯ãƒ¼ãƒ‰å˜ä½)
-    int Nr = 0;       // ãƒ©ã‚¦ãƒ³ãƒ‰æ•°
+    const int Nb = 4; // ƒuƒƒbƒNƒTƒCƒY (ƒ[ƒh’PˆÊ)
+    int Nk = 0;       // ƒL[’· (ƒ[ƒh’PˆÊ)
+    int Nr = 0;       // ƒ‰ƒEƒ“ƒh”
 
-    const uint8_t ivSize = 16;      // IVã®ã‚µã‚¤ã‚º (AESã¯16ãƒã‚¤ãƒˆã®ãƒ–ãƒ­ãƒƒã‚¯ã‚µã‚¤ã‚ºã‚’æŒã¤)
-    const uint8_t paddingSize = 16; // ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ã‚µã‚¤ã‚º (PKCS7ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°)
+    const uint8_t ivSize = 16;      // IV‚ÌƒTƒCƒY (AES‚Í16ƒoƒCƒg‚ÌƒuƒƒbƒNƒTƒCƒY‚ğ‚Â)
+    const uint8_t paddingSize = 16; // ƒpƒfƒBƒ“ƒOƒTƒCƒY (PKCS7ƒpƒfƒBƒ“ƒO)
 
-    // AES-NIç”¨ã®éµã‚¹ã‚±ã‚¸ãƒ¥ãƒ¼ãƒ«
+    // AES-NI—p‚ÌŒ®ƒXƒPƒWƒ…[ƒ‹
     std::vector<__m128i> rd_key;
     std::vector<__m128i> dec_key;
 
-    std::vector<uint32_t> keyScheduleWords; // ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢å®Ÿè£…ç”¨ã®éµã‚¹ã‚±ã‚¸ãƒ¥ãƒ¼ãƒ«
+    std::vector<uint32_t> keyScheduleWords; // ƒ\ƒtƒgƒEƒFƒAÀ‘•—p‚ÌŒ®ƒXƒPƒWƒ…[ƒ‹
 };
