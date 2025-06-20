@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cassert>
+#include <cstdint>
 
 // p.10~4. Mathemaical Preliminaries(4.1, 4.2)
 class GFPolynomial {
