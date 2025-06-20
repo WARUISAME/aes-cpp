@@ -15,7 +15,7 @@ add_library(AES_Library STATIC ${AES_SOURCES})
 
 # インクルードディレクトリを追加
 target_include_directories(AES_Library PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/AES
 )
 
 # コンパイルオプション
