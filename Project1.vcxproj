@@ -128,27 +128,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\AES\AES.cpp" />
-    <ClCompile Include="Source\AES\Main.cpp" />
-    <ClCompile Include="Source\AES\GFPoly.cpp" />
-    <ClCompile Include="Source\AES\Sbox.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Source\AES\AES.h" />
-    <ClInclude Include="Source\AES\GFCPoly.h" />
-    <ClInclude Include="Source\AES\GFPoly.h" />
-    <ClInclude Include="Source\AES\Sbox.h" />
-    <ClInclude Include="Source\AES\State.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="Source\AES\CMakeLists.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="LICENSE" />
     <None Include="README.md">
       <SubType>
       </SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\AES\AES.h" />
+    <ClInclude Include="include\AES\GFCPoly.h" />
+    <ClInclude Include="include\AES\GFPoly.h" />
+    <ClInclude Include="include\AES\Sbox.h" />
+    <ClInclude Include="include\AES\State.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="examples\Main.cpp" />
+    <ClCompile Include="src\AES.cpp" />
+    <ClCompile Include="src\GFPoly.cpp" />
+    <ClCompile Include="src\Sbox.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

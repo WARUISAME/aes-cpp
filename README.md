@@ -18,6 +18,9 @@ C++で実装されたAES暗号化ライブラリです。ソフトウェアベ�
 - **クロスプラットフォーム**: CMakeを使用しているため、Windows、Linuxなど、さまざまなプラットフォームでビルドして使用できます。
 
 ## 使用方法
+CBCモードで暗号化する際、IV（初期化ベクトル）はライブラリ内部で安全な乱数を用いて自動的に生成されます。生成されたIVは、暗号文の先頭16バイトに付加されます。復号時には、ライブラリが自動的に先頭16バイトをIVとして解釈し、残りのデータを復号します。
+
+このライブラリは、平文のパディングにPKCS#7方式を自動的に採用します。暗号化時に適切なパディングが付加され、復号時に自動的に除去されるため、ユーザーが長さを意識する必要はありません。
 
 ### インクルード
 `#include "AES.h"`
@@ -65,29 +68,26 @@ auto decrypted_bytes_ni = aes_ni.decrypt_cbc(ciphertext_ni);
 ```
 ## ビルド方法
 
-このプロジェクトはCMakeを使用しています。以下の手順でビルドできます。
+このプロジェクトはMSVCとCMakeを使用しています。以下の手順でビルドできます。
 
-1. **リポジトリをクローン**git clone <repository-url>
-   cd AES_CPP
-2. **ビルドディレクトリを作成**mkdir build
-   cd build
-3. **CMakeを実行してビルドファイルを生成**cmake ..
-4. **ビルド**
-   - **Windows (Visual Studio)** ```bash
- cmake --build . --config Release
- ```   - **Linux/macOS** ```bash
-     make ```
+- **Visual Studio**
+ のプロジェクトに直接ライブラリを組み込む場合は、AES.h や AES.cpp などのソースファイルをプロジェクトに追加し、インクルードパスを設定してください。
+
+- CMakeを使用してビルドする場合は、以下の手順に従ってください。
+1. **リポジトリをクローン** ``` git clone https://github.com/WARUISAME/AES_CPP.git ```
+   ``` cd AES_CPP ```
+2. **ビルドディレクトリを作成** ``` mkdir build ```
+   ``` cd build ```
+3. **CMakeを実行してビルドファイルを生成** ``` cmake .. ```
+4. **ビルド** ``` make ```
+サンプルプログラムを起動する場合はcmakeのオプションに`-DSAMPLE=ON`を追加してください。
 
 CMakeを使用してビルドする際は、親のMakeFileに以下を追加してください。
 ``` cmake
 add_subdirectory(AES_CPP)
 target_link_libraries(your_target_name PRIVATE AES_Library)
 ```
-MSVCを利用する場合は、プロジェクトにインクルードを直接を追加する必要があります。
+
 ## ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
-
-## 貢献
-
-バグ報告や機能改善のプルリクエストを歓迎します。貢献を検討される方は、まずIssueを作成して議論を始めてください。
