@@ -19,7 +19,7 @@ target_include_directories(AES_Library PUBLIC
 )
 
 # コンパイルオプション
-target_compile_options(AES_Library PRIVATE -Wno-ignored-attributes)
+target_compile_options(AES_Library PRIVATE -Wno-ignored-attributes -maes -mssse3 -mpclmul)
 target_compile_definitions(AES_Library PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
