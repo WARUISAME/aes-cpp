@@ -24,7 +24,7 @@ private:
     uint16_t bitLength(uint16_t n) const;
 };
 
-// æ–@“I‹tŒ³‚ÌŒvZ
+// ä¹—æ³•çš„é€†å…ƒã®è¨ˆç®—
 void initInverse();
 
 GFPolynomial inverse(const GFPolynomial& poly);

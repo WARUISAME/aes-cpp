@@ -60,7 +60,7 @@ uint16_t GFPolynomial::bitLength(uint16_t n) const {
     return length;
 }
 
-// 乗法的逆元の計算
+// 荵玲ｳ慕噪騾�蜈�縺ｮ險育ｮ�
 std::vector<GFPolynomial> inverseTable(256, GFPolynomial(0));
 
 void initInverse() {

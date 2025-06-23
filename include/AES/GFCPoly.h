@@ -32,7 +32,7 @@ public:
 
     GFCPolynomial operator+(const GFCPolynomial& rhs) const {
         GFCPolynomial res({});
-        for (int i = 0; i < 4; ++i) { // GF(2^8) ‚Ì‘«‚µŽZ‚ðs‚¤
+        for (int i = 0; i < 4; ++i) { // GF(2^8) ã®è¶³ã—ç®—ã‚’è¡Œã†
             res.cs[i] = this->cs[i] + rhs.cs[i];
         }
         return res;

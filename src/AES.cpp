@@ -1,7 +1,7 @@
 #include "AES.h"
 
 AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(cipherKey), aesniSupported(check_aesni_support(aesniflag)) {
-    // ‹tŒ³ƒe[ƒuƒ‹‚Ì‰Šú‰»
+    // é€†å…ƒãƒ†ãƒ¼ãƒ–ãƒ«ã®åˆæœŸåŒ–
     initInverse();
 
     const bool AES128Flag = cipherKey.size() == AES_128;
@@ -25,13 +25,13 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
         throw std::invalid_argument("Invalid key length");
     }
 
-    // rd_key‚Ædec_key‚ÌƒTƒCƒY‚ğİ’è (Nr‚Íƒ‰ƒEƒ“ƒh”‚È‚Ì‚Å Nr + 1 ŒÂ‚ÌŒ®‚ª•K—v)
+    // rd_keyã¨dec_keyã®ã‚µã‚¤ã‚ºã‚’è¨­å®š (Nrã¯ãƒ©ã‚¦ãƒ³ãƒ‰æ•°ãªã®ã§ Nr + 1 å€‹ã®éµãŒå¿…è¦)
     rd_key.resize(Nr + 1);
     dec_key.resize(Nr + 1);
 
-    // AES-NI‚ªƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚éê‡
+    // AES-NIãŒã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ã‚‹å ´åˆ
     if (aesniSupported) {
-        // Œ®Šg’£
+        // éµæ‹¡å¼µ
 
         if (AES128Flag) {
             __m128i temp1_keyexp, temp2_keyexp;
@@ -144,7 +144,7 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
                 case 12: keygened = _mm_aeskeygenassist_si128(temp2, 0x20); break;
                 case 14: keygened = _mm_aeskeygenassist_si128(temp2, 0x40); break;
                 default:
-                    keygened = _mm_setzero_si128(); // ƒ_ƒ~[’l
+                    keygened = _mm_setzero_si128(); // ãƒ€ãƒŸãƒ¼å€¤
                     break;
                 }
                 keygened = _mm_shuffle_epi32(keygened, 0xFF);
@@ -170,7 +170,7 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
             }
         }
 
-        // •œ†—pŒ®¶¬
+        // å¾©å·ç”¨éµç”Ÿæˆ
         dec_key[0] = rd_key[Nr];
         for (size_t i = 1; i < Nr; ++i) {
             dec_key[i] = _mm_aesimc_si128(rd_key[Nr - i]);
@@ -192,7 +192,7 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
     }
 }
 
-// CBCƒ‚[ƒh‚ÅˆÃ†‰»
+// CBCãƒ¢ãƒ¼ãƒ‰ã§æš—å·åŒ–
 std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
     if (!aesniSupported) {
         std::vector<uint8_t> iv = generate_iv();
@@ -215,7 +215,7 @@ std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
     }
 }
 
-// CBCƒ‚[ƒh‚Å•œ†‰»
+// CBCãƒ¢ãƒ¼ãƒ‰ã§å¾©å·åŒ–
 std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipher_text) {
     if (!aesniSupported) {
         std::vector<uint8_t> iv(cipher_text.begin(), cipher_text.begin() + paddingSize);
@@ -237,7 +237,7 @@ std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipher_text) {
     }
 }
 
-//----------ƒ\ƒtƒgƒEƒFƒA----------
+//----------ã‚½ãƒ•ãƒˆã‚¦ã‚§ã‚¢----------
 State AES::subBytes(const State &s) {
     std::vector<uint8_t> res;
     for(int c = 0; c < 4; c++){
@@ -365,21 +365,21 @@ std::vector<uint32_t> AES::keyExpansion() {
 
     std::vector<uint32_t> w(Nb * (Nr + 1), 0);
 
-    // ‰ŠúŒ®‚Ìƒ[ƒhiC³Ï‚İ‚ÌƒGƒ“ƒfƒBƒAƒ“ˆ—j
+    // åˆæœŸéµã®ãƒ­ãƒ¼ãƒ‰ï¼ˆä¿®æ­£æ¸ˆã¿ã®ã‚¨ãƒ³ãƒ‡ã‚£ã‚¢ãƒ³å‡¦ç†ï¼‰
     for (int i = 0; i < Nk; ++i) {
         w[i] = byteArray2Word({
-            key[4 * i],     // ÅãˆÊƒoƒCƒg
+            key[4 * i],     // æœ€ä¸Šä½ãƒã‚¤ãƒˆ
             key[4 * i + 1],
             key[4 * i + 2],
-            key[4 * i + 3]    // Å‰ºˆÊƒoƒCƒg
+            key[4 * i + 3]    // æœ€ä¸‹ä½ãƒã‚¤ãƒˆ
             });
     }
 
-    // Œ®Šg’£‚ÌƒƒCƒ“ˆ—
+    // éµæ‹¡å¼µã®ãƒ¡ã‚¤ãƒ³å‡¦ç†
     for (int i = Nk; i < Nb * (Nr + 1); ++i) {
         uint32_t temp = w[i - 1];
         if (i % Nk == 0) {
-            // Rcon‚Ì³‚µ‚¢“K—p
+            // Rconã®æ­£ã—ã„é©ç”¨
             uint8_t rc = rcon[i / Nk];
             temp = subWord(rotWord(temp)) ^ (rc << 24);
         }
@@ -390,7 +390,7 @@ std::vector<uint32_t> AES::keyExpansion() {
     }
 
 
-    // ƒfƒoƒbƒOo—ÍiÅ‰‚ÆÅŒã‚Ìƒ‰ƒEƒ“ƒhƒL[j
+    // ãƒ‡ãƒãƒƒã‚°å‡ºåŠ›ï¼ˆæœ€åˆã¨æœ€å¾Œã®ãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ï¼‰
 #ifdef _DEBUG
     std::cout << "First round key: ";
     for (int i = 0; i < 4; ++i) printf("%08x ", w[i]);
@@ -403,13 +403,13 @@ std::vector<uint32_t> AES::keyExpansion() {
 }
 
 std::vector<uint8_t> AES::cipher(const std::vector<uint8_t> &inputBytes) {
-    // “ü—ÍƒoƒCƒg—ñ‚ğState‚Ì•ÏŠ·
+    // å…¥åŠ›ãƒã‚¤ãƒˆåˆ—ã‚’Stateã®å¤‰æ›
     State st(inputBytes);
 
-    // ‰Šúƒ‰ƒEƒ“ƒhƒL[‚Ì’Ç‰Á
+    // åˆæœŸãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã®è¿½åŠ 
     st = addRoundKey(st, { keyScheduleWords.begin(), keyScheduleWords.begin() + Nb});
 
-	// 1ƒ‰ƒEƒ“ƒh‚©‚çNr-1ƒ‰ƒEƒ“ƒh
+	// 1ãƒ©ã‚¦ãƒ³ãƒ‰ã‹ã‚‰Nr-1ãƒ©ã‚¦ãƒ³ãƒ‰
     for (int r = 1; r < Nr; ++r) {
         st = subBytes(st);
         st = shiftRows(st);
@@ -417,7 +417,7 @@ std::vector<uint8_t> AES::cipher(const std::vector<uint8_t> &inputBytes) {
         st = addRoundKey(st, { keyScheduleWords.begin() + r * Nb, keyScheduleWords.begin() + (r + 1) * Nb});
     }
 
-    // ÅIƒ‰ƒEƒ“ƒh
+    // æœ€çµ‚ãƒ©ã‚¦ãƒ³ãƒ‰
     st = subBytes(st);
     st = shiftRows(st);
     st = addRoundKey(st, { keyScheduleWords.begin() + Nr * Nb, keyScheduleWords.begin() + (Nr + 1) * Nb});
@@ -444,10 +444,10 @@ std::vector<uint8_t> AES::invCipher(const std::vector<uint8_t>& inputBytes) {
     return st.getBytes();
 }
 
-// Nk ƒL[‚Ìƒ[ƒh” ( 1ƒ[ƒh = 4ƒoƒCƒg )
-// Nr ƒ‰ƒEƒ“ƒh”
-// KeyExpansion: ˆÃ†‰»ƒL[‚©‚çŠeƒ‰ƒEƒ“ƒhƒL[‚ğ¶¬
-// Cipher: ˆÃ†‰»
+// Nk ã‚­ãƒ¼ã®ãƒ¯ãƒ¼ãƒ‰æ•° ( 1ãƒ¯ãƒ¼ãƒ‰ = 4ãƒã‚¤ãƒˆ )
+// Nr ãƒ©ã‚¦ãƒ³ãƒ‰æ•°
+// KeyExpansion: æš—å·åŒ–ã‚­ãƒ¼ã‹ã‚‰å„ãƒ©ã‚¦ãƒ³ãƒ‰ã‚­ãƒ¼ã‚’ç”Ÿæˆ
+// Cipher: æš—å·åŒ–
 std::vector<uint8_t> AES::encrypt(const std::vector<uint8_t> &input_bytes) {
     return cipher(input_bytes);
 }
@@ -458,11 +458,11 @@ std::vector<uint8_t> AES::decrypt(const std::vector<uint8_t>& cipher_text) {
 
 //----------AES-NI----------
 
-// AES-NI‚ğg—p‚µ‚ÄˆÃ†‰»
+// AES-NIã‚’ä½¿ç”¨ã—ã¦æš—å·åŒ–
 std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_text) {
     if (plain_text.size() == 0) return {};
 
-    // ƒpƒfƒBƒ“ƒO’Ç‰Á (PKCS#7)
+    // ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°è¿½åŠ  (PKCS#7)
     size_t pad_len = paddingSize - (plain_text.size() % paddingSize);
     std::vector<uint8_t> padded(plain_text.begin(), plain_text.end());
     padded.resize(plain_text.size() + pad_len, static_cast<uint8_t>(pad_len));
@@ -475,7 +475,7 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
     }
 #endif
 
-    // IV¶¬
+    // IVç”Ÿæˆ
     std::vector<uint8_t> iv(ivSize);
     std::random_device rd;
     std::generate(iv.begin(), iv.end(), [&]() { return rd(); });
@@ -485,7 +485,7 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
     std::vector<uint8_t> cipher(iv.size() + padded.size());
     _mm_storeu_si128(reinterpret_cast<__m128i*>(cipher.data()), iv_block);
 
-    // CBCˆÃ†‰»
+    // CBCæš—å·åŒ–
     for (size_t i = 0; i < padded.size(); i += paddingSize) {
         __m128i plain_block = _mm_loadu_si128(
             reinterpret_cast<const __m128i*>(padded.data() + i));
@@ -500,20 +500,20 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
     return cipher;
 }
 
-// AES-NI‚ğg—p‚µ‚ÄCBCƒ‚[ƒh‚Å•œ†‰»
+// AES-NIã‚’ä½¿ç”¨ã—ã¦CBCãƒ¢ãƒ¼ãƒ‰ã§å¾©å·åŒ–
 std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text) {
     if (cipher_text.size() < ivSize || (cipher_text.size() - ivSize) % Nb != 0) {
         throw std::invalid_argument("Invalid cipher length");
     }
 
-    // IV’Šo
+    // IVæŠ½å‡º
     __m128i iv_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(cipher_text.data()));
     __m128i prev_block = iv_block;
 
     const size_t data_len = cipher_text.size() - ivSize;
     std::vector<uint8_t> plain(data_len);
 
-    // CBC•œ†
+    // CBCå¾©å·
     for (size_t i = ivSize; i < cipher_text.size(); i += paddingSize) {
         __m128i ct_block = _mm_loadu_si128(
             reinterpret_cast<const __m128i*>(cipher_text.data() + i));
@@ -527,7 +527,7 @@ std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_te
         prev_block = ct_block;
     }
 
-    // ƒpƒfƒBƒ“ƒOíœ
+    // ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°å‰Šé™¤
     size_t pad_len = plain.back();
 
     if (pad_len > paddingSize) throw std::runtime_error("Invalid padding");
@@ -582,7 +582,7 @@ inline void AES::AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3) 
     *temp3 = _mm_xor_si128(*temp3, *temp2);
 }
 
-//----------‹¤’Ê----------
+//----------å…±é€š----------
 
 // Generate a random IV (Initialization Vector)
 std::vector<uint8_t> AES::generate_iv() {
@@ -612,14 +612,14 @@ std::vector<uint8_t> AES::xor_vectors(const std::vector<uint8_t> &a, const std::
     return result;
 }
 
-// “ü—Í‚ğ16ƒoƒCƒg‚Ì”{”‚ÉƒpƒfƒBƒ“ƒO‚·‚é (PKCS7ƒpƒfƒBƒ“ƒO)
+// å…¥åŠ›ã‚’16ãƒã‚¤ãƒˆã®å€æ•°ã«ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ã™ã‚‹ (PKCS7ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°)
 // Pad the input to be a multiple of 16 bytes (PKCS7 padding)
 std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
     size_t padding_size = 16 - (input.size() % 16);
     std::vector<uint8_t> padded = input;
     padded.insert(padded.end(), padding_size, static_cast<uint8_t>(padding_size));
 
-    // ƒfƒoƒbƒOo—Í
+    // ãƒ‡ãƒãƒƒã‚°å‡ºåŠ›
 #ifdef _DEBUG
     std::cout << "Padding added: " << static_cast<int>(padding_size)
         << " bytes\nPadded data:\n";
@@ -630,7 +630,7 @@ std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
     return padded;
 }
 
-// •œ†‚µ‚½ƒeƒLƒXƒg‚©‚çƒpƒfƒBƒ“ƒO‚ğíœ
+// å¾©å·ã—ãŸãƒ†ã‚­ã‚¹ãƒˆã‹ã‚‰ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ã‚’å‰Šé™¤
 // Remove padding from the decrypted text
 std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_input) {
     if (padded_input.size() < 16) {
@@ -642,10 +642,10 @@ std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_inpu
         throw std::invalid_argument("Invalid padding value");
     }
 
-    // ‘SƒpƒfƒBƒ“ƒOƒoƒCƒg‚ğƒ`ƒFƒbƒN
+    // å…¨ãƒ‘ãƒ‡ã‚£ãƒ³ã‚°ãƒã‚¤ãƒˆã‚’ãƒã‚§ãƒƒã‚¯
     const size_t padding_start = padded_input.size() - padding_value;
 
-    // ƒfƒoƒbƒOî•ño—Í
+    // ãƒ‡ãƒãƒƒã‚°æƒ…å ±å‡ºåŠ›
 #ifdef _DEBUG
     std::cerr << "Padding value detected: " << static_cast<int>(padding_value)
         << "\nLast 16 bytes:\n";
@@ -666,17 +666,17 @@ std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_inpu
     );
 }
 
-// ƒ[ƒh‚©‚çƒoƒCƒg”z—ñ‚Ö‚Ì•ÏŠ·iƒrƒbƒOƒGƒ“ƒfƒBƒAƒ“j
+// ãƒ¯ãƒ¼ãƒ‰ã‹ã‚‰ãƒã‚¤ãƒˆé…åˆ—ã¸ã®å¤‰æ›ï¼ˆãƒ“ãƒƒã‚°ã‚¨ãƒ³ãƒ‡ã‚£ã‚¢ãƒ³ï¼‰
 std::vector<uint8_t> AES::word2ByteArray(uint32_t word) {
     std::vector<uint8_t> byteArray;
-    byteArray.push_back((word >> 24) & 0xFF); // ÅãˆÊƒoƒCƒg
+    byteArray.push_back((word >> 24) & 0xFF); // æœ€ä¸Šä½ãƒã‚¤ãƒˆ
     byteArray.push_back((word >> 16) & 0xFF);
     byteArray.push_back((word >> 8) & 0xFF);
-    byteArray.push_back(word & 0xFF);         // Å‰ºˆÊƒoƒCƒg
+    byteArray.push_back(word & 0xFF);         // æœ€ä¸‹ä½ãƒã‚¤ãƒˆ
     return byteArray;
 }
 
-// ƒoƒCƒg”z—ñ‚©‚çƒ[ƒh‚Ö‚Ì•ÏŠ·iƒrƒbƒOƒGƒ“ƒfƒBƒAƒ“j
+// ãƒã‚¤ãƒˆé…åˆ—ã‹ã‚‰ãƒ¯ãƒ¼ãƒ‰ã¸ã®å¤‰æ›ï¼ˆãƒ“ãƒƒã‚°ã‚¨ãƒ³ãƒ‡ã‚£ã‚¢ãƒ³ï¼‰
 uint32_t AES::byteArray2Word(const std::vector<uint8_t>& byteArray) {
     uint32_t res = 0;
     for (uint8_t byte : byteArray) {
@@ -685,9 +685,9 @@ uint32_t AES::byteArray2Word(const std::vector<uint8_t>& byteArray) {
     return res;
 }
 
-// AES-NI‚ªCPU‚É‚ ‚é‚Ì‚©”»’è‚·‚éƒvƒƒOƒ‰ƒ€
-// ˆø”‚Ìƒtƒ‰ƒO‚Í”CˆÓ‚ÅAES-NI‚ğg—p‚·‚é‚©‚Ìƒtƒ‰ƒO‚ÅA
-// true‚Ìê‡‚Å‚àCPU‚ªAES-NI‚ğƒTƒ|[ƒg‚µ‚Ä‚¢‚È‚¢ê‡‚Ífalse‚ğ•Ô‚µ‚Ü‚·
+// AES-NIãŒCPUã«ã‚ã‚‹ã®ã‹åˆ¤å®šã™ã‚‹ãƒ—ãƒ­ã‚°ãƒ©ãƒ 
+// å¼•æ•°ã®ãƒ•ãƒ©ã‚°ã¯ä»»æ„ã§AES-NIã‚’ä½¿ç”¨ã™ã‚‹ã‹ã®ãƒ•ãƒ©ã‚°ã§ã€
+// trueã®å ´åˆã§ã‚‚CPUãŒAES-NIã‚’ã‚µãƒãƒ¼ãƒˆã—ã¦ã„ãªã„å ´åˆã¯falseã‚’è¿”ã—ã¾ã™
 bool AES::check_aesni_support(const bool aesniflag) {
     if (!aesniflag) {
         return false;
@@ -696,17 +696,17 @@ bool AES::check_aesni_support(const bool aesniflag) {
 #if defined(_MSC_VER)
     int cpuInfo[4] = { 0 };
     __cpuid(cpuInfo, 1);
-    // ECXƒŒƒWƒXƒ^‚Ì25ƒrƒbƒg–Ú‚ªAES-NI‚ÌƒTƒ|[ƒg‚ğ¦‚µ‚Ü‚· ( (1 << 25) ‚Í 0x02000000 )
+    // ECXãƒ¬ã‚¸ã‚¹ã‚¿ã®25ãƒ“ãƒƒãƒˆç›®ãŒAES-NIã®ã‚µãƒãƒ¼ãƒˆã‚’ç¤ºã—ã¾ã™ ( (1 << 25) ã¯ 0x02000000 )
     return (cpuInfo[2] & (1 << 25)) != 0;
 #elif (defined(__GNUC__))
-    unsigned int eax = 1, ebx = 0, ecx = 0, edx = 0; // eax‚Éfunction_id = 1 ‚ğƒZƒbƒg
+    unsigned int eax = 1, ebx = 0, ecx = 0, edx = 0; // eaxã«function_id = 1 ã‚’ã‚»ãƒƒãƒˆ
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx)) {
-        // ECXƒŒƒWƒXƒ^‚Ì25ƒrƒbƒg–Ú‚ªAES-NI‚ÌƒTƒ|[ƒg‚ğ¦‚µ‚Ü‚·
+        // ECXãƒ¬ã‚¸ã‚¹ã‚¿ã®25ãƒ“ãƒƒãƒˆç›®ãŒAES-NIã®ã‚µãƒãƒ¼ãƒˆã‚’ç¤ºã—ã¾ã™
         return (ecx & (1 << 25)) != 0;
     }
-    return false; // __get_cpuid ‚ª¸”s‚µ‚½ê‡ (‚Ü‚½‚ÍƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚È‚¢ê‡)
+    return false; // __get_cpuid ãŒå¤±æ•—ã—ãŸå ´åˆ (ã¾ãŸã¯ã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ãªã„å ´åˆ)
 #else
-    // ã‹LˆÈŠO‚ÌƒRƒ“ƒpƒCƒ‰‚âƒvƒ‰ƒbƒgƒtƒH[ƒ€‚Å‚ÍAAES-NI‚ÍƒTƒ|[ƒg‚³‚ê‚Ä‚¢‚È‚¢‚Æ”»’f
+    // ä¸Šè¨˜ä»¥å¤–ã®ã‚³ãƒ³ãƒ‘ã‚¤ãƒ©ã‚„ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ã§ã¯ã€AES-NIã¯ã‚µãƒãƒ¼ãƒˆã•ã‚Œã¦ã„ãªã„ã¨åˆ¤æ–­
     return false;
 #endif
 }
