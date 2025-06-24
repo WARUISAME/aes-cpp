@@ -9,8 +9,10 @@
 
 #include <stdexcept>
 #include <random>
+#include <cstring>
 
-#include <immintrin.h> // AES-NI
+// AES-NI
+#include <immintrin.h>
 #include <wmmintrin.h>
 
 // AES-NIがサポートされているかどうかを確認するためのヘッダー
@@ -19,8 +21,6 @@
 #elif defined(__GNUC__)
     #include <cpuid.h>
 #endif
-
-#include <cstring>
 
 // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
 
@@ -91,6 +91,9 @@ private:
     inline __m128i AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2);
     // AES-192 のキー拡張用
     inline void AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3);
+
+    inline void KEY_256_ASSIST_1(__m128i* temp1, __m128i* temp2);
+    inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i* temp3);
 
     // --- 共通の関数 ---
     
