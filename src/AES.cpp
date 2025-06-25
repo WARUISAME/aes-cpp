@@ -32,7 +32,8 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
     // AES-NIがサポートされている場合
     if (aesniSupported) {
         // 鍵拡張
-
+        // https://www.intel.com/content/dam/doc/white-paper/advanced-encryption-standard-new-instructions-set-paper.pdf
+        // p24 AES-128, AES-192, and AES-256 Key Expansion (C code)
         if (AES128Flag) {
             __m128i temp1_keyexp, temp2_keyexp;
 
@@ -457,7 +458,9 @@ std::vector<uint8_t> AES::decrypt(const std::vector<uint8_t>& cipher_text) {
 
 //----------AES-NI----------
 
-// AES-NIを使用して暗号化
+// AES-NIを使用してCBCモードで暗号化
+// https://www.intel.com/content/dam/doc/white-paper/advanced-encryption-standard-new-instructions-set-paper.pdf
+// 29p AES Encryption and Decryption in CBC Mode 
 std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_text) {
     if (plain_text.size() == 0) return {};
 
