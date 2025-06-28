@@ -181,9 +181,11 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
         for (size_t i = 0; i < rd_key.size(); ++i) {
             uint8_t buf[16];
             _mm_storeu_si128(reinterpret_cast<__m128i*>(buf), rd_key[i]);
-            printf("AES-NI round %zu: ", i);
-            for (int j = 0; j < 16; ++j) printf("%02x", buf[j]);
-            printf("\n");
+            std::cout << "AES-NI round " << i << ": ";
+            for (int j = 0; j < 16; ++j) {
+                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)buf[j];
+            }
+            std::cout << std::endl;
         }
 #endif
     }
@@ -192,10 +194,26 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
     }
 }
 
+AES::~AES() {
+    // 鍵や鍵スケジュールなどの機密情報をメモリから安全に消去する
+    if (!key.empty()) {
+        secure_zero_memory(key.data(), key.size() * sizeof(key[0]));
+    }
+    if (!rd_key.empty()) {
+        secure_zero_memory(rd_key.data(), rd_key.size() * sizeof(rd_key[0]));
+    }
+    if (!dec_key.empty()) {
+        secure_zero_memory(dec_key.data(), dec_key.size() * sizeof(dec_key[0]));
+    }
+    if (!keyScheduleWords.empty()) {
+        secure_zero_memory(keyScheduleWords.data(), keyScheduleWords.size() * sizeof(keyScheduleWords[0]));
+    }
+}
+
 // CBCモードで暗号化
 std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
     if (!aesniSupported) {
-        std::vector<uint8_t> iv = generate_iv();
+        std::vector<uint8_t> iv = generare_random_bytes(ivSize);
         std::vector<uint8_t> padded_text = pad_input(plain_text);
         std::vector<uint8_t> cipher_text = iv;
 
@@ -393,10 +411,14 @@ std::vector<uint32_t> AES::keyExpansion() {
     // デバッグ出力（最初と最後のラウンドキー）
 #ifdef _DEBUG
     std::cout << "First round key: ";
-    for (int i = 0; i < 4; ++i) printf("%08x ", w[i]);
+    for (int i = 0; i < 4; ++i) {
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << w[i] << " ";
+    }
     std::cout << "\nLast round key: ";
-    for (size_t i = w.size() - 4; i < w.size(); ++i) printf("%08x ", w[i]);
-    std::cout << "\n";
+    for (size_t i = w.size() - 4; i < w.size(); ++i) {
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << w[i] << " ";
+    }
+    std::cout << std::endl;
 #endif
 
     return w;
@@ -472,8 +494,14 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
 #ifdef _DEBUG
     std::cout << "Padding added: " << static_cast<int>(pad_len)
         << " bytes\nPadded data:\n";
-    for (size_t i = 0; i < padded.size(); ++i) {
-        printf("%02x%c", padded[i], ((i + 1) % 16 == 0) ? '\n' : ' ');
+    for (size_t i = 0; i < plain_text.size(); ++i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)plain_text[i];
+        if ((i + 1) % 16 == 0) {
+            std::cout << '\n';
+        }
+        else {
+            std::cout << ' ';
+        }
     }
 #endif
 
@@ -611,18 +639,15 @@ inline void AES::KEY_256_ASSIST_2(__m128i *temp1, __m128i *temp3) {
 
 //----------共通----------
 
-// Generate a random IV (Initialization Vector)
-std::vector<uint8_t> AES::generate_iv() {
-    std::vector<uint8_t> iv(16);
+std::vector<uint8_t> AES::generare_random_bytes(size_t length) {
+    std::vector<uint8_t> random_bytes(length);
     std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 255);
 
-    for (int i = 0; i < 16; ++i) {
-        iv[i] = static_cast<uint8_t>(dis(gen));
+    for (size_t i = 0; i < length; ++i) {
+        random_bytes[i] = static_cast<uint8_t>(rd() & 0xFF);
     }
 
-    return iv;
+    return random_bytes;
 }
 
 // XOR two vectors
@@ -651,7 +676,13 @@ std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
     std::cout << "Padding added: " << static_cast<int>(padding_size)
         << " bytes\nPadded data:\n";
     for (size_t i = 0; i < padded.size(); ++i) {
-        printf("%02x%c", padded[i], ((i + 1) % 16 == 0) ? '\n' : ' ');
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)padded[i];
+        if ((i + 1) % 16 == 0) {
+            std::cout << '\n';
+        }
+        else {
+            std::cout << ' ';
+        }
     }
 #endif
     return padded;
@@ -678,7 +709,13 @@ std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_inpu
         << "\nLast 16 bytes:\n";
     for (size_t i = (padded_input.size() < 16) ? 0 : padded_input.size() - 16;
         i < padded_input.size(); ++i) {
-        printf("%02x%c", padded_input[i], ((i + 1) % 16 == 0) ? '\n' : ' ');
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)padded_input[i];
+        if ((i + 1) % 16 == 0) {
+            std::cout << '\n';
+        }
+        else {
+            std::cout << ' ';
+        }
     }
     for (size_t i = padding_start; i < padded_input.size(); ++i) {
         if (padded_input[i] != padding_value) {
@@ -731,10 +768,18 @@ bool AES::check_aesni_support(const bool aesniflag) {
         // ECXレジスタの25ビット目がAES-NIのサポートを示します
         return (ecx & (1 << 25)) != 0;
     }
-    return false; // __get_cpuid が失敗した場合 (またはサポートされていない場合)
+    return false; // サポートされていない
 #else
-    // 上記以外のコンパイラやプラットフォームでは、AES-NIはサポートされていないと判断
+    // AES-NIはサポートされていないと判断
     return false;
 #endif
+}
+
+// メモリの内容をゼロクリアする
+void AES::secure_zero_memory(void* ptr, size_t len) {
+    volatile uint8_t* p = static_cast<volatile uint8_t*>(ptr);
+    while (len--) {
+        *p++ = 0;
+    }
 }
 

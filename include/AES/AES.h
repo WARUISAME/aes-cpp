@@ -28,6 +28,8 @@ class AES {
 public:
     AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag);
 
+    ~AES();
+
     // Encrypt using CBC mode
     std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text);
 
@@ -84,7 +86,9 @@ private:
     // AES-NIを使用してCBCモードで復号化
     std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text);
 
+    // AES-NIを使用してブロックを暗号化
     __m128i encrypt_block(__m128i block) const;
+    // AES-NIを使用してブロックを復号化
     __m128i decrypt_block(__m128i block) const;
 
     // AES-128 のキー拡張用
@@ -92,13 +96,14 @@ private:
     // AES-192 のキー拡張用
     inline void AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3);
 
+    // AES-256 のキー拡張用
     inline void KEY_256_ASSIST_1(__m128i* temp1, __m128i* temp2);
     inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i* temp3);
 
     // --- 共通の関数 ---
     
-    // Generate a random IV (Initialization Vector)
-    std::vector<uint8_t> generate_iv();
+    // Generate a vector of random bytes of a given size.
+    static std::vector<uint8_t> generare_random_bytes(size_t length);
 
     // XOR two vectors
     std::vector<uint8_t> xor_vectors(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b);
@@ -118,6 +123,9 @@ private:
     // AES-NIがCPUにあるのか判定するプログラム
     bool check_aesni_support(const bool aesniflag);
 
+    // メモリをゼロクリアする
+    void secure_zero_memory(void* ptr, size_t len);
+
 private:
     // AES-NIがサポートされているか true: サポートされている false: サポートされていない
     bool aesniSupported = false;
@@ -128,9 +136,9 @@ private:
 
     std::vector<uint8_t> key; // 暗号キー
 
-    const int Nb = 4; // ブロックサイズ (ワード単位)
-    int Nk = 0;       // キー長 (ワード単位)
-    int Nr = 0;       // ラウンド数
+    const uint8_t Nb = 4; // ブロックサイズ (ワード単位)
+    uint8_t Nk = 0;       // キー長 (ワード単位)
+    uint8_t Nr = 0;       // ラウンド数
 
     const uint8_t ivSize = 16;      // IVのサイズ (AESは16バイトのブロックサイズを持つ)
     const uint8_t paddingSize = 16; // パディングサイズ (PKCS7パディング)
