@@ -1,4 +1,4 @@
-#include "GFPoly.h"
+﻿#include "GFPoly.h"
 #include <cassert>
 
 GFPolynomial::GFPolynomial(uint16_t c) {

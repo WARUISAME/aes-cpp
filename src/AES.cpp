@@ -1,4 +1,4 @@
-#include "AES.h"
+﻿#include "AES.h"
 
 AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(cipherKey), aesniSupported(check_aesni_support(aesniflag)) {
     // 逆元テーブルの初期化
