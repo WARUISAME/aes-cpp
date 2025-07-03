@@ -80,7 +80,8 @@ auto decrypted_bytes_ni = aes_ni.decrypt_cbc(ciphertext_ni);
    ``` cd build ```
 3. **CMakeを実行してビルドファイルを生成** ``` cmake .. ```
 4. **ビルド** ``` make ```
-サンプルプログラムを起動する場合はcmakeのオプションに`-DSAMPLE=ON`を追加してください。
+
+サンプルプログラムを起動する場合はcmakeのオプションに`-DBUILD_EXAMPLES=ON`を追加してください。
 
 CMakeを使用してビルドする際は、親のMakeFileに以下を追加してください。
 ``` cmake
