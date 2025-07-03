@@ -1,6 +1,7 @@
 ﻿# AES_CPP Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/WARUISAME/AES_CPP)
 
 > [!WARNING]
 > このライブラリのセキュリティを保証するものではありません。セキュリティが重要な用途には、信頼性の高いライブラリを使用することを強く推奨します。特に、セキュリティクリティカルなアプリケーションでは、例えば[OpenSSL](https://www.openssl.org/)のような広く使用されているライブラリを利用してください。このライブラリは教育目的で提供されており、実際のプロダクション環境での使用は推奨されません。
