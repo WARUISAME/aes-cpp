@@ -26,7 +26,7 @@
 
 class AES {
 public:
-    AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag);
+    AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag = true);
 
     ~AES();
 
@@ -48,7 +48,7 @@ private:
     // Stateの各列に対して多項式操作を行う
     State mixColumns(const State& s);
 
-    // ubBytesの逆変換
+    // subBytesの逆変換
     State invSubBytes(const State& s);
 
     // shiftRowsの逆変換
@@ -87,32 +87,32 @@ private:
     std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text);
 
     // AES-NIを使用してブロックを暗号化
-    __m128i encrypt_block(__m128i block) const;
+    __m128i encryptBlock(__m128i block) const;
     // AES-NIを使用してブロックを復号化
-    __m128i decrypt_block(__m128i block) const;
+    __m128i decryptBlock(__m128i block) const;
 
     // AES-128 のキー拡張用
-    inline __m128i AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2);
+    inline __m128i aes128AssistImpl(__m128i temp1, __m128i temp2);
     // AES-192 のキー拡張用
-    inline void AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3);
+    inline void aes192Assist(__m128i* temp1, __m128i* temp2, __m128i* temp3);
 
     // AES-256 のキー拡張用
-    inline void KEY_256_ASSIST_1(__m128i* temp1, __m128i* temp2);
-    inline void KEY_256_ASSIST_2(__m128i* temp1, __m128i* temp3);
+    inline void key256Assist1(__m128i* temp1, __m128i* temp2);
+    inline void key256Assist2(__m128i* temp1, __m128i* temp3);
 
     // --- 共通の関数 ---
     
     // Generate a vector of random bytes of a given size.
-    static std::vector<uint8_t> generare_random_bytes(size_t length);
+    static std::vector<uint8_t> generateRandomBytes(size_t length);
 
     // XOR two vectors
-    std::vector<uint8_t> xor_vectors(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b);
+    std::vector<uint8_t> xorVectors(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b);
 
     // Pad the input to be a multiple of 16 bytes (PKCS7 padding)
-    std::vector<uint8_t> pad_input(const std::vector<uint8_t>& input);
+    std::vector<uint8_t> padInput(const std::vector<uint8_t>& input);
 
     // Remove padding from the decrypted text
-    std::vector<uint8_t> remove_padding(const std::vector<uint8_t>& padded_input);
+    std::vector<uint8_t> removePadding(const std::vector<uint8_t>& padded_input);
 
     // 32bitのワードを4バイトの配列に変換
     std::vector<uint8_t> word2ByteArray(uint32_t word);
@@ -121,10 +121,10 @@ private:
     uint32_t byteArray2Word(const std::vector<uint8_t>& byteArray);
 
     // AES-NIがCPUにあるのか判定するプログラム
-    bool check_aesni_support(const bool aesniflag);
+    bool checkAESNISupport(const bool aesniflag);
 
     // メモリをゼロクリアする
-    void secure_zero_memory(void* ptr, size_t len);
+    void secureZeroMemory(void* ptr, size_t len);
 
 private:
     // AES-NIがサポートされているか true: サポートされている false: サポートされていない
@@ -144,8 +144,8 @@ private:
     const uint8_t paddingSize = 16; // パディングサイズ (PKCS7パディング)
 
     // AES-NI用の鍵スケジュール
-    std::vector<__m128i> rd_key;
-    std::vector<__m128i> dec_key;
+    std::vector<__m128i> rdKey;
+    std::vector<__m128i> decKey;
 
     std::vector<uint32_t> keyScheduleWords; // ソフトウェア実装用の鍵スケジュール
 };

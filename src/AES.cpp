@@ -1,6 +1,6 @@
 ﻿#include "AES.h"
 
-AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(cipherKey), aesniSupported(check_aesni_support(aesniflag)) {
+AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(cipherKey), aesniSupported(checkAESNISupport(aesniflag)) {
     // 逆元テーブルの初期化
     initInverse();
 
@@ -25,9 +25,9 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
         throw std::invalid_argument("Invalid key length");
     }
 
-    // rd_keyとdec_keyのサイズを設定 (Nrはラウンド数なので Nr + 1 個の鍵が必要)
-    rd_key.resize(Nr + 1);
-    dec_key.resize(Nr + 1);
+    // rdKeyとdecKeyのサイズを設定 (Nrはラウンド数なので Nr + 1 個の鍵が必要)
+    rdKey.resize(Nr + 1);
+    decKey.resize(Nr + 1);
 
     // AES-NIがサポートされている場合
     if (aesniSupported) {
@@ -38,47 +38,47 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
             __m128i temp1_keyexp, temp2_keyexp;
 
             temp1_keyexp = _mm_loadu_si128(reinterpret_cast<const __m128i*>(this->key.data()));
-            rd_key[0] = temp1_keyexp;
+            rdKey[0] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x01);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[1] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[1] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x02);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[2] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[2] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x04);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[3] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[3] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x08);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[4] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[4] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x10);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[5] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[5] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x20);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[6] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[6] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x40);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[7] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[7] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x80);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[8] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[8] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x1b);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[9] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[9] = temp1_keyexp;
 
             temp2_keyexp = _mm_aeskeygenassist_si128(temp1_keyexp, 0x36);
-            temp1_keyexp = AES_128_ASSIST_IMPL(temp1_keyexp, temp2_keyexp);
-            rd_key[10] = temp1_keyexp;
+            temp1_keyexp = aes128AssistImpl(temp1_keyexp, temp2_keyexp);
+            rdKey[10] = temp1_keyexp;
         }
         else if (AES192Flag) {
             __m128i temp1, temp2, temp3;
@@ -86,101 +86,101 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
             temp1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(key.data()));
             temp3 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(key.data() + 16));
 
-            rd_key[0] = temp1;
-            rd_key[1] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
+            rdKey[0] = temp1;
+            rdKey[1] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x1);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[1] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rd_key[1]), _mm_castsi128_pd(temp1), 0b00));
-            rd_key[2] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[1] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rdKey[1]), _mm_castsi128_pd(temp1), 0b00));
+            rdKey[2] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x2);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[3] = temp1;
-            rd_key[4] = temp3;
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[3] = temp1;
+            rdKey[4] = temp3;
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x4);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[4] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rd_key[4]), _mm_castsi128_pd(temp1), 0b00));
-            rd_key[5] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[4] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rdKey[4]), _mm_castsi128_pd(temp1), 0b00));
+            rdKey[5] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x8);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[6] = temp1;
-            rd_key[7] = temp3;
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[6] = temp1;
+            rdKey[7] = temp3;
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x10);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[7] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rd_key[7]), _mm_castsi128_pd(temp1), 0b00));
-            rd_key[8] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[7] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rdKey[7]), _mm_castsi128_pd(temp1), 0b00));
+            rdKey[8] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x20);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[9] = temp1;
-            rd_key[10] = temp3;
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[9] = temp1;
+            rdKey[10] = temp3;
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x40);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[10] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rd_key[10]), _mm_castsi128_pd(temp1), 0b00));
-            rd_key[11] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[10] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(rdKey[10]), _mm_castsi128_pd(temp1), 0b00));
+            rdKey[11] = _mm_castpd_si128(_mm_shuffle_pd(_mm_castsi128_pd(temp1), _mm_castsi128_pd(temp3), 0b01));
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x80);
-            AES_192_ASSIST(&temp1, &temp2, &temp3);
-            rd_key[12] = temp1;
+            aes192Assist(&temp1, &temp2, &temp3);
+            rdKey[12] = temp1;
         }
         else if (AES256Flag) {
             __m128i temp1, temp2, temp3;
             temp1 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(key.data()));
             temp3 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(key.data() + 16));
-            rd_key[0] = temp1;
-            rd_key[1] = temp3;
+            rdKey[0] = temp1;
+            rdKey[1] = temp3;
 
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x01);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[2] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[3] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[2] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[3] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x02);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[4] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[5] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[4] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[5] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x04);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[6] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[7] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[6] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[7] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x08);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[8] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[9] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[8] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[9] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x10);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[10] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[11] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[10] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[11] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x20);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[12] = temp1;
-            KEY_256_ASSIST_2(&temp1, &temp3);
-            rd_key[13] = temp3;
+            key256Assist1(&temp1, &temp2);
+            rdKey[12] = temp1;
+            key256Assist2(&temp1, &temp3);
+            rdKey[13] = temp3;
             temp2 = _mm_aeskeygenassist_si128(temp3, 0x40);
-            KEY_256_ASSIST_1(&temp1, &temp2);
-            rd_key[14] = temp1;
+            key256Assist1(&temp1, &temp2);
+            rdKey[14] = temp1;
         }
 
         // 復号用鍵生成
-        dec_key[0] = rd_key[Nr];
+        decKey[0] = rdKey[Nr];
         for (size_t i = 1; i < Nr; ++i) {
-            dec_key[i] = _mm_aesimc_si128(rd_key[Nr - i]);
+            decKey[i] = _mm_aesimc_si128(rdKey[Nr - i]);
         }
-        dec_key[Nr] = rd_key[0];
+        decKey[Nr] = rdKey[0];
 
 #ifdef _DEBUG
-        for (size_t i = 0; i < rd_key.size(); ++i) {
+        for (size_t i = 0; i < rdKey.size(); ++i) {
             uint8_t buf[16];
-            _mm_storeu_si128(reinterpret_cast<__m128i*>(buf), rd_key[i]);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(buf), rdKey[i]);
             std::cout << "AES-NI round " << i << ": ";
             for (int j = 0; j < 16; ++j) {
                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)buf[j];
@@ -197,30 +197,30 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
 AES::~AES() {
     // 鍵や鍵スケジュールなどの機密情報をメモリから安全に消去する
     if (!key.empty()) {
-        secure_zero_memory(key.data(), key.size() * sizeof(key[0]));
+        secureZeroMemory(key.data(), key.size() * sizeof(key[0]));
     }
-    if (!rd_key.empty()) {
-        secure_zero_memory(rd_key.data(), rd_key.size() * sizeof(rd_key[0]));
+    if (!rdKey.empty()) {
+        secureZeroMemory(rdKey.data(), rdKey.size() * sizeof(rdKey[0]));
     }
-    if (!dec_key.empty()) {
-        secure_zero_memory(dec_key.data(), dec_key.size() * sizeof(dec_key[0]));
+    if (!decKey.empty()) {
+        secureZeroMemory(decKey.data(), decKey.size() * sizeof(decKey[0]));
     }
     if (!keyScheduleWords.empty()) {
-        secure_zero_memory(keyScheduleWords.data(), keyScheduleWords.size() * sizeof(keyScheduleWords[0]));
+        secureZeroMemory(keyScheduleWords.data(), keyScheduleWords.size() * sizeof(keyScheduleWords[0]));
     }
 }
 
 // CBCモードで暗号化
 std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
     if (!aesniSupported) {
-        std::vector<uint8_t> iv = generare_random_bytes(ivSize);
-        std::vector<uint8_t> padded_text = pad_input(plain_text);
+        std::vector<uint8_t> iv = generateRandomBytes(ivSize);
+        std::vector<uint8_t> padded_text = padInput(plain_text);
         std::vector<uint8_t> cipher_text = iv;
 
         std::vector<uint8_t> previous_block = iv;
         for (size_t i = 0; i < padded_text.size(); i += paddingSize) {
             std::vector<uint8_t> block(padded_text.begin() + i, padded_text.begin() + i + paddingSize);
-            block = xor_vectors(block, previous_block);
+            block = xorVectors(block, previous_block);
             std::vector<uint8_t> encrypted_block = encrypt(block);
             cipher_text.insert(cipher_text.end(), encrypted_block.begin(), encrypted_block.end());
             previous_block = encrypted_block;
@@ -243,12 +243,12 @@ std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipher_text) {
         for (size_t i = paddingSize; i < cipher_text.size(); i += paddingSize) {
             std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + paddingSize);
             std::vector<uint8_t> decrypted_block = decrypt(block);
-            std::vector<uint8_t> plain_block = xor_vectors(decrypted_block, previous_block);
+            std::vector<uint8_t> plain_block = xorVectors(decrypted_block, previous_block);
             plain_text.insert(plain_text.end(), plain_block.begin(), plain_block.end());
             previous_block = block;
         }
 
-        return remove_padding(plain_text);
+        return removePadding(plain_text);
     }
     else {
         return decryptAESNI_cbc(cipher_text);
@@ -521,7 +521,7 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
             reinterpret_cast<const __m128i*>(padded.data() + i));
 
         iv_block = _mm_xor_si128(plain_block, iv_block);
-        iv_block = encrypt_block(iv_block);
+        iv_block = encryptBlock(iv_block);
 
         _mm_storeu_si128(
             reinterpret_cast<__m128i*>(cipher.data() + iv.size() + i), iv_block);
@@ -548,7 +548,7 @@ std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_te
         __m128i ct_block = _mm_loadu_si128(
             reinterpret_cast<const __m128i*>(cipher_text.data() + i));
 
-        __m128i pt_block = decrypt_block(ct_block);
+        __m128i pt_block = decryptBlock(ct_block);
         pt_block = _mm_xor_si128(pt_block, prev_block);
 
         _mm_storeu_si128(
@@ -566,23 +566,23 @@ std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_te
     return plain;
 }
 
-__m128i AES::encrypt_block(__m128i block) const {
-    block = _mm_xor_si128(block, rd_key[0]);
+__m128i AES::encryptBlock(__m128i block) const {
+    block = _mm_xor_si128(block, rdKey[0]);
     for (size_t i = 1; i < Nr; ++i) {
-        block = _mm_aesenc_si128(block, rd_key[i]);
+        block = _mm_aesenc_si128(block, rdKey[i]);
     }
-    return _mm_aesenclast_si128(block, rd_key[Nr]);
+    return _mm_aesenclast_si128(block, rdKey[Nr]);
 }
 
-__m128i AES::decrypt_block(__m128i block) const {
-    block = _mm_xor_si128(block, dec_key[0]);
+__m128i AES::decryptBlock(__m128i block) const {
+    block = _mm_xor_si128(block, decKey[0]);
     for (size_t i = 1; i < Nr; ++i) {
-        block = _mm_aesdec_si128(block, dec_key[i]);
+        block = _mm_aesdec_si128(block, decKey[i]);
     }
-    return _mm_aesdeclast_si128(block, dec_key[Nr]);
+    return _mm_aesdeclast_si128(block, decKey[Nr]);
 }
 
-inline __m128i AES::AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2) {
+inline __m128i AES::aes128AssistImpl(__m128i temp1, __m128i temp2) {
     __m128i temp3;
     temp2 = _mm_shuffle_epi32(temp2, 0xff);
     temp3 = _mm_slli_si128(temp1, 0x4);
@@ -596,7 +596,7 @@ inline __m128i AES::AES_128_ASSIST_IMPL(__m128i temp1, __m128i temp2) {
     return temp1;
 }
 
-inline void AES::AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3) {
+inline void AES::aes192Assist(__m128i* temp1, __m128i* temp2, __m128i* temp3) {
     __m128i temp4;
     *temp2 = _mm_shuffle_epi32(*temp2, 0x55);
     temp4 = _mm_slli_si128(*temp1, 0x4);
@@ -612,7 +612,7 @@ inline void AES::AES_192_ASSIST(__m128i* temp1, __m128i* temp2, __m128i* temp3) 
     *temp3 = _mm_xor_si128(*temp3, *temp2);
 }
 
-inline void AES::KEY_256_ASSIST_1(__m128i *temp1, __m128i *temp2) {
+inline void AES::key256Assist1(__m128i *temp1, __m128i *temp2) {
     __m128i temp4;
     *temp2 = _mm_shuffle_epi32(*temp2, 0xff);
     temp4 = _mm_slli_si128(*temp1, 0x4);
@@ -624,7 +624,7 @@ inline void AES::KEY_256_ASSIST_1(__m128i *temp1, __m128i *temp2) {
     *temp1 = _mm_xor_si128(*temp1, *temp2);
 }
 
-inline void AES::KEY_256_ASSIST_2(__m128i *temp1, __m128i *temp3) {
+inline void AES::key256Assist2(__m128i *temp1, __m128i *temp3) {
     __m128i temp2,temp4;
     temp4 = _mm_aeskeygenassist_si128(*temp1, 0x00);
     temp2 = _mm_shuffle_epi32(temp4, 0xaa);
@@ -639,7 +639,7 @@ inline void AES::KEY_256_ASSIST_2(__m128i *temp1, __m128i *temp3) {
 
 //----------共通----------
 
-std::vector<uint8_t> AES::generare_random_bytes(size_t length) {
+std::vector<uint8_t> AES::generateRandomBytes(size_t length) {
     std::vector<uint8_t> random_bytes(length);
     std::random_device rd;
 
@@ -651,7 +651,7 @@ std::vector<uint8_t> AES::generare_random_bytes(size_t length) {
 }
 
 // XOR two vectors
-std::vector<uint8_t> AES::xor_vectors(const std::vector<uint8_t> &a, const std::vector<uint8_t> &b) {
+std::vector<uint8_t> AES::xorVectors(const std::vector<uint8_t> &a, const std::vector<uint8_t> &b) {
     if (a.size() != b.size()) {
         throw std::invalid_argument("Vectors must be of the same size for XOR operation");
     }
@@ -666,7 +666,7 @@ std::vector<uint8_t> AES::xor_vectors(const std::vector<uint8_t> &a, const std::
 
 // 入力を16バイトの倍数にパディングする (PKCS7パディング)
 // Pad the input to be a multiple of 16 bytes (PKCS7 padding)
-std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
+std::vector<uint8_t> AES::padInput(const std::vector<uint8_t> &input) {
     size_t padding_size = 16 - (input.size() % 16);
     std::vector<uint8_t> padded = input;
     padded.insert(padded.end(), padding_size, static_cast<uint8_t>(padding_size));
@@ -691,7 +691,7 @@ std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
 
 // 復号したテキストからパディングを削除
 // Remove padding from the decrypted text
-std::vector<uint8_t> AES::remove_padding(const std::vector<uint8_t>& padded_input) {
+std::vector<uint8_t> AES::removePadding(const std::vector<uint8_t>& padded_input) {
     if (padded_input.size() < 16) {
         throw std::invalid_argument("Padded input too short");
     }
@@ -753,7 +753,7 @@ uint32_t AES::byteArray2Word(const std::vector<uint8_t>& byteArray) {
 // AES-NIがCPUにあるのか判定するプログラム
 // 引数のフラグは任意でAES-NIを使用するかのフラグで、
 // trueの場合でもCPUがAES-NIをサポートしていない場合はfalseを返します
-bool AES::check_aesni_support(const bool aesniflag) {
+bool AES::checkAESNISupport(const bool aesniflag) {
     if (!aesniflag) {
         return false;
     }
@@ -777,7 +777,7 @@ bool AES::check_aesni_support(const bool aesniflag) {
 }
 
 // メモリの内容をゼロクリアする
-void AES::secure_zero_memory(void* ptr, size_t len) {
+void AES::secureZeroMemory(void* ptr, size_t len) {
     volatile uint8_t* p = static_cast<volatile uint8_t*>(ptr);
     while (len--) {
         *p++ = 0;

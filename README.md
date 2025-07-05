@@ -58,8 +58,9 @@ int main() {
 ```
 #### AES-NI実装
 
-AES-NIを有効にするには、`AES`クラスのコンストラクタで第2引数に`true`を渡します。
-``` cpp
+AES-NIを有効にするには、`AES`クラスのコンストラクタで第2引数に`true`を渡します。（第2引数はデフォルトで`true`が設定されているため省略可能です）
+
+```cpp
 // AESオブジェクトの作成（AES-NIを有効化）
 AES aes_ni(key, true);
 
@@ -67,6 +68,19 @@ AES aes_ni(key, true);
 auto ciphertext_ni = aes_ni.encrypt_cbc(plaintext_bytes);
 auto decrypted_bytes_ni = aes_ni.decrypt_cbc(ciphertext_ni);
 ```
+
+**AES-NIの利点:**
+- **高速処理**: CPUのハードウェア支援により大幅な性能向上
+- **セキュリティ**: ハードウェアレベルでの実装によりサイドチャネル攻撃への耐性が向上
+- **自動判定**: 実行時にCPUのAES-NI対応を自動判定し、対応していない場合はソフトウェア実装に自動切り替え
+
+**対応CPU:**
+- Intel: 2010年以降のWestmere世代以降のプロセッサ
+- AMD: 2012年以降のBulldozer世代以降のプロセッサ
+
+**注意:**
+AES-NIフラグを`true`に設定していても、CPUがAES-NIに対応していない場合は自動的にソフトウェア実装にフォールバックされます。
+
 ## ビルド方法
 
 このプロジェクトはMSVCとCMakeを使用しています。以下の手順でビルドできます。
