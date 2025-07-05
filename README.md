@@ -63,6 +63,7 @@ AES-NIを有効にするには、`AES`クラスのコンストラクタで第2�
 ```cpp
 // AESオブジェクトの作成（AES-NIを有効化）
 AES aes_ni(key, true);
+// AES aes_ni(key);
 
 // 暗号化・復号の使い方はソフトウェア実装と同じ
 auto ciphertext_ni = aes_ni.encrypt_cbc(plaintext_bytes);
