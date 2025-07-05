@@ -1,6 +1,6 @@
 # CMakeのバージョンを設定
 cmake_minimum_required(VERSION 3.20)
-project(AES_CPP)
+project(aes-cpp)
 
 # ライブラリのソースファイル
 set(AES_SOURCES
@@ -11,22 +11,23 @@ set(AES_SOURCES
 
 # 静的ライブラリとしてAES_Libraryを定義
 # 
-add_library(AES_Library STATIC ${AES_SOURCES})
+add_library(aes-cpp STATIC ${AES_SOURCES})
 
 # インクルードディレクトリを追加
-target_include_directories(AES_Library PUBLIC
+target_include_directories(aes-cpp PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include/AES
 )
 
 # コンパイルオプション
-target_compile_options(AES_Library PRIVATE -Wno-ignored-attributes -maes -mssse3 -mpclmul)
-target_compile_definitions(AES_Library PRIVATE
+target_compile_options(aes-cpp PRIVATE -Wno-ignored-attributes -maes -mssse3 -mpclmul)
+target_compile_definitions(aes-cpp PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
 
-# サンプルをビルドするためのオプション (デフォルトでON)
-option(BUILD_EXAMPLES "Build the example executable" OFF)
-if(BUILD_EXAMPLES)
-    add_executable(example examples/Main.cpp)
-    target_link_libraries(example PRIVATE AES_Library)
-endif()
+# make example でサンプルをビルドできるカスタムターゲット
+add_executable(example_target EXCLUDE_FROM_ALL examples/Main.cpp)
+target_link_libraries(example_target PRIVATE aes-cpp)
+set_target_properties(example_target PROPERTIES OUTPUT_NAME example)
+
+# make example でビルドできるようにエイリアスを作成
+add_custom_target(example DEPENDS example_target)

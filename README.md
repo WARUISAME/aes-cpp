@@ -1,4 +1,4 @@
-﻿# AES_CPP Library
+﻿# aes-cpp Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/WARUISAME/AES_CPP)
@@ -75,19 +75,19 @@ auto decrypted_bytes_ni = aes_ni.decrypt_cbc(ciphertext_ni);
  のプロジェクトに直接ライブラリを組み込む場合は、AES.h や AES.cpp などのソースファイルをプロジェクトに追加し、インクルードパスを設定してください。
 
 - CMakeを使用してビルドする場合は、以下の手順に従ってください。
-1. **リポジトリをクローン** ``` git clone https://github.com/WARUISAME/AES_CPP.git ```
-   ``` cd AES_CPP ```
+1. **リポジトリをクローン** ``` git clone https://github.com/WARUISAME/aes-cpp.git ```
+   ``` cd aes-cpp ```
 2. **ビルドディレクトリを作成** ``` mkdir build ```
    ``` cd build ```
 3. **CMakeを実行してビルドファイルを生成** ``` cmake .. ```
 4. **ビルド** ``` make ```
 
-サンプルプログラムを起動する場合はcmakeのオプションに`-DBUILD_EXAMPLES=ON`を追加してください。
+サンプルプログラムを必要な場合はmakeのオプションに`example`を追加してください。
 
 CMakeを使用してビルドする際は、親のMakeFileに以下を追加してください。
 ``` cmake
-add_subdirectory(AES_CPP)
-target_link_libraries(your_target_name PRIVATE AES_Library)
+add_subdirectory(aes-cpp)
+target_link_libraries(your_target_name PRIVATE aes-cpp)
 ```
 
 ## ライセンス

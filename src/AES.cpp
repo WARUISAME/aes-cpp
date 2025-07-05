@@ -684,6 +684,7 @@ std::vector<uint8_t> AES::pad_input(const std::vector<uint8_t> &input) {
             std::cout << ' ';
         }
     }
+    std::cout << std::endl;
 #endif
     return padded;
 }
