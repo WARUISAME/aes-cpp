@@ -32,4 +32,9 @@ jobs:
     - name: Run Example/Test
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: ./example
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          ./Release/example.exe
+        else
+          ./example
+        fi
