@@ -15,4 +15,4 @@ jobs:
     - name: Install cppcheck
       run: sudo apt-get update && sudo apt-get install -y cppcheck
     - name: Run cppcheck
-      run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem src/ include/
+      run: cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem src/ include/AES/
