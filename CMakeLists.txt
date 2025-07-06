@@ -19,7 +19,12 @@ target_include_directories(aes-cpp PUBLIC
 )
 
 # コンパイルオプション
-target_compile_options(aes-cpp PRIVATE -Wno-ignored-attributes -maes -mssse3 -mpclmul)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(aes-cpp PRIVATE -Wno-ignored-attributes -maes -mssse3 -mpclmul)
+elseif(MSVC)
+    #target_compile_options(aes-cpp PRIVATE /arch:AES)
+endif()
+
 target_compile_definitions(aes-cpp PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
