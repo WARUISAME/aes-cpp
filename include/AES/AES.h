@@ -36,6 +36,12 @@ public:
     // Decrypt using CBC mode
     std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text);
 
+    // Encrypt using GCM mode
+    std::vector<uint8_t> encrypt_gcm(const std::vector<uint8_t>& plain_text);
+
+    // Decrypt using GCM mode
+    std::vector<uint8_t> decrypt_gcm(const std::vector<uint8_t>& cipher_text);
+
 private:
     // --- ソフトウェア実装の関数 ---
     
@@ -69,15 +75,11 @@ private:
     // 暗号化キーから各ラウンドキーを生成
     std::vector<uint32_t> keyExpansion();
 
+    // 暗号化ブロック
     std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes);
 
+    // 復号化ブロック
     std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes);
-
-    // 暗号化
-    std::vector<uint8_t> encrypt(const std::vector<uint8_t>& input_bytes);
-
-    // 復号化
-    std::vector<uint8_t> decrypt(const std::vector<uint8_t>& cipher_text);
 
     // --- AES-NI実装の関数 ---
     
