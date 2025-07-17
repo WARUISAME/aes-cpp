@@ -221,7 +221,7 @@ std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
         for (size_t i = 0; i < padded_text.size(); i += paddingSize) {
             std::vector<uint8_t> block(padded_text.begin() + i, padded_text.begin() + i + paddingSize);
             block = xorVectors(block, previous_block);
-            std::vector<uint8_t> encrypted_block = encrypt(block);
+            std::vector<uint8_t> encrypted_block = cipher(block);
             cipher_text.insert(cipher_text.end(), encrypted_block.begin(), encrypted_block.end());
             previous_block = encrypted_block;
         }
@@ -242,7 +242,7 @@ std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipher_text) {
         std::vector<uint8_t> previous_block = iv;
         for (size_t i = paddingSize; i < cipher_text.size(); i += paddingSize) {
             std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + paddingSize);
-            std::vector<uint8_t> decrypted_block = decrypt(block);
+            std::vector<uint8_t> decrypted_block = invCipher(block);
             std::vector<uint8_t> plain_block = xorVectors(decrypted_block, previous_block);
             plain_text.insert(plain_text.end(), plain_block.begin(), plain_block.end());
             previous_block = block;
@@ -424,6 +424,10 @@ std::vector<uint32_t> AES::keyExpansion() {
     return w;
 }
 
+// Nk キーのワード数 ( 1ワード = 4バイト )
+// Nr ラウンド数
+// KeyExpansion: 暗号化キーから各ラウンドキーを生成
+// Cipher: 暗号化
 std::vector<uint8_t> AES::cipher(const std::vector<uint8_t> &inputBytes) {
     // 入力バイト列をStateの変換
     State st(inputBytes);
@@ -466,18 +470,6 @@ std::vector<uint8_t> AES::invCipher(const std::vector<uint8_t>& inputBytes) {
     return st.getBytes();
 }
 
-// Nk キーのワード数 ( 1ワード = 4バイト )
-// Nr ラウンド数
-// KeyExpansion: 暗号化キーから各ラウンドキーを生成
-// Cipher: 暗号化
-std::vector<uint8_t> AES::encrypt(const std::vector<uint8_t> &input_bytes) {
-    return cipher(input_bytes);
-}
-
-std::vector<uint8_t> AES::decrypt(const std::vector<uint8_t>& cipher_text) {
-    return invCipher(cipher_text);
-}
-
 //----------AES-NI----------
 
 // AES-NIを使用してCBCモードで暗号化
@@ -503,6 +495,7 @@ std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_tex
             std::cout << ' ';
         }
     }
+    std::cout << std::endl;
 #endif
 
     // IV生成
