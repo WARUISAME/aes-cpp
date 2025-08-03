@@ -30,17 +30,23 @@ public:
 
     ~AES();
 
+    // 暗号化ブロック
+    std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes);
+
+    // 復号化ブロック
+    std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes);
+
     // Encrypt using CBC mode
-    std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plain_text);
+    std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plainText);
 
     // Decrypt using CBC mode
-    std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipher_text);
+    std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipherText);
 
     // Encrypt using GCM mode
-    std::vector<uint8_t> encrypt_gcm(const std::vector<uint8_t>& plain_text);
+    std::vector<uint8_t> encrypt_gcm(const std::vector<uint8_t>& plainText);
 
     // Decrypt using GCM mode
-    std::vector<uint8_t> decrypt_gcm(const std::vector<uint8_t>& cipher_text);
+    std::vector<uint8_t> decrypt_gcm(const std::vector<uint8_t>& cipherText);
 
 private:
     // --- ソフトウェア実装の関数 ---
@@ -75,18 +81,30 @@ private:
     // 暗号化キーから各ラウンドキーを生成
     std::vector<uint32_t> keyExpansion();
 
-    // 暗号化ブロック
-    std::vector<uint8_t> cipher(const std::vector<uint8_t>& inputBytes);
-
-    // 復号化ブロック
-    std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes);
+    // --- GCM実装の関数 ---
+    
+    // GCMを使用してCTRモードで暗号化/復号化
+    std::vector<uint8_t> encryptGCM_ctr(const std::vector<uint8_t>& plainText, const std::vector<uint8_t>& iv, uint32_t counterStart = 2);
+    std::vector<uint8_t> decryptGCM_ctr(const std::vector<uint8_t>& cipherText, const std::vector<uint8_t>& iv, uint32_t counterStart = 2);
+    
+    // GF(2^128) での乗算
+    std::vector<uint8_t> gfMultiply(const std::vector<uint8_t>& x, const std::vector<uint8_t>& y);
+    
+    // GHASH関数
+    std::vector<uint8_t> ghash(const std::vector<uint8_t>& h, const std::vector<uint8_t>& data);
+    
+    // カウンターブロックの生成
+    std::vector<uint8_t> generateCounterBlock(const std::vector<uint8_t>& iv, uint32_t counter);
+    
+    // GCTR関数（CTRモードの暗号化/復号化）
+    std::vector<uint8_t> gctr(const std::vector<uint8_t>& icb, const std::vector<uint8_t>& data);
 
     // --- AES-NI実装の関数 ---
     
     // AES-NIを使用してCBCモードで暗号化
-    std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plain_text);
+    std::vector<uint8_t> encryptAESNI_cbc(const std::vector<uint8_t>& plainText);
     // AES-NIを使用してCBCモードで復号化
-    std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text);
+    std::vector<uint8_t> decryptAESNI_cbc(const std::vector<uint8_t>& cipherText);
 
     // AES-NIを使用してブロックを暗号化
     __m128i encryptBlock(__m128i block) const;
@@ -114,7 +132,7 @@ private:
     std::vector<uint8_t> padInput(const std::vector<uint8_t>& input);
 
     // Remove padding from the decrypted text
-    std::vector<uint8_t> removePadding(const std::vector<uint8_t>& padded_input);
+    std::vector<uint8_t> removePadding(const std::vector<uint8_t>& paddedInput);
 
     // 32bitのワードを4バイトの配列に変換
     std::vector<uint8_t> word2ByteArray(uint32_t word);
@@ -127,6 +145,9 @@ private:
 
     // メモリをゼロクリアする
     void secureZeroMemory(void* ptr, size_t len);
+
+    // デバック表示用
+    void paddingPrintHex(const std::vector<uint8_t>& data, const size_t& dataSize) const;
 
 private:
     // AES-NIがサポートされているか true: サポートされている false: サポートされていない
@@ -148,6 +169,10 @@ private:
     // AES-NI用の鍵スケジュール
     std::vector<__m128i> rdKey;
     std::vector<__m128i> decKey;
+
+    // GCM用の定数
+    const uint8_t gcmIvSize = 12;    // GCMでは96ビット（12バイト）のIVを推奨
+    const uint8_t gcmTagSize = 16;   // 認証タグのサイズ（128ビット）
 
     std::vector<uint32_t> keyScheduleWords; // ソフトウェア実装用の鍵スケジュール
 };
