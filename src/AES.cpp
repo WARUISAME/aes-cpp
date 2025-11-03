@@ -185,7 +185,7 @@ AES::AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag) : key(ciph
             for (int j = 0; j < 16; ++j) {
                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)buf[j];
             }
-            std::cout << std::endl;
+            std::cout << std::dec << std::endl;
         }
 #endif
     }
@@ -211,47 +211,47 @@ AES::~AES() {
 }
 
 // CBCモードで暗号化
-std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plain_text) {
+std::vector<uint8_t> AES::encrypt_cbc(const std::vector<uint8_t>& plainText) {
     if (!aesniSupported) {
         std::vector<uint8_t> iv = generateRandomBytes(ivSize);
-        std::vector<uint8_t> padded_text = padInput(plain_text);
-        std::vector<uint8_t> cipher_text = iv;
+        std::vector<uint8_t> paddedText = padInput(plainText);
+        std::vector<uint8_t> cipherText = iv;
 
-        std::vector<uint8_t> previous_block = iv;
-        for (size_t i = 0; i < padded_text.size(); i += paddingSize) {
-            std::vector<uint8_t> block(padded_text.begin() + i, padded_text.begin() + i + paddingSize);
-            block = xorVectors(block, previous_block);
-            std::vector<uint8_t> encrypted_block = cipher(block);
-            cipher_text.insert(cipher_text.end(), encrypted_block.begin(), encrypted_block.end());
-            previous_block = encrypted_block;
+        std::vector<uint8_t> previousBlock = iv;
+        for (size_t i = 0; i < paddedText.size(); i += paddingSize) {
+            std::vector<uint8_t> block(paddedText.begin() + i, paddedText.begin() + i + paddingSize);
+            block = xorVectors(block, previousBlock);
+            std::vector<uint8_t> encryptedBlock = cipher(block);
+            cipherText.insert(cipherText.end(), encryptedBlock.begin(), encryptedBlock.end());
+            previousBlock = encryptedBlock;
         }
 
-        return cipher_text;
+        return cipherText;
     }
     else {
-        return encryptAESNI_cbc(plain_text);
+        return encryptAESNI_cbc(plainText);
     }
 }
 
 // CBCモードで復号化
-std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipher_text) {
+std::vector<uint8_t> AES::decrypt_cbc(const std::vector<uint8_t>& cipherText) {
     if (!aesniSupported) {
-        std::vector<uint8_t> iv(cipher_text.begin(), cipher_text.begin() + paddingSize);
-        std::vector<uint8_t> plain_text;
+        std::vector<uint8_t> iv(cipherText.begin(), cipherText.begin() + paddingSize);
+        std::vector<uint8_t> plainText;
 
-        std::vector<uint8_t> previous_block = iv;
-        for (size_t i = paddingSize; i < cipher_text.size(); i += paddingSize) {
-            std::vector<uint8_t> block(cipher_text.begin() + i, cipher_text.begin() + i + paddingSize);
-            std::vector<uint8_t> decrypted_block = invCipher(block);
-            std::vector<uint8_t> plain_block = xorVectors(decrypted_block, previous_block);
-            plain_text.insert(plain_text.end(), plain_block.begin(), plain_block.end());
-            previous_block = block;
+        std::vector<uint8_t> previousBlock = iv;
+        for (size_t i = paddingSize; i < cipherText.size(); i += paddingSize) {
+            std::vector<uint8_t> block(cipherText.begin() + i, cipherText.begin() + i + paddingSize);
+            std::vector<uint8_t> decryptedBlock = invCipher(block);
+            std::vector<uint8_t> plainBlock = xorVectors(decryptedBlock, previousBlock);
+            plainText.insert(plainText.end(), plainBlock.begin(), plainBlock.end());
+            previousBlock = block;
         }
 
-        return removePadding(plain_text);
+        return removePadding(plainText);
     }
     else {
-        return decryptAESNI_cbc(cipher_text);
+        return decryptAESNI_cbc(cipherText);
     }
 }
 
@@ -418,7 +418,7 @@ std::vector<uint32_t> AES::keyExpansion() {
     for (size_t i = w.size() - 4; i < w.size(); ++i) {
         std::cout << std::hex << std::setw(8) << std::setfill('0') << w[i] << " ";
     }
-    std::cout << std::endl;
+    std::cout << std::dec << std::endl;
 #endif
 
     return w;
@@ -470,92 +470,344 @@ std::vector<uint8_t> AES::invCipher(const std::vector<uint8_t>& inputBytes) {
     return st.getBytes();
 }
 
+//----------GCM----------
+// GCMモードで暗号化
+std::vector<uint8_t> AES::encrypt_gcm(const std::vector<uint8_t>& plainText) {
+
+    // IV生成（96ビット）
+    std::vector<uint8_t> iv = generateRandomBytes(gcmIvSize);
+    
+    // ハッシュサブキーHを生成（暗号化キーで0ブロックを暗号化）
+    std::vector<uint8_t> zeroBlock(16, 0);
+    std::vector<uint8_t> h;
+    
+    if (aesniSupported) {
+        __m128i zero = _mm_setzero_si128();
+        __m128i h_block = encryptBlock(zero);
+        h.resize(16);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(h.data()), h_block);
+    } else {
+        h = cipher(zeroBlock);
+    }
+    
+    // CTRモードで暗号化
+    std::vector<uint8_t> cipherText = encryptGCM_ctr(plainText, iv, 2);
+    
+    // 認証データの準備（今回は空）
+    std::vector<uint8_t> additionalData;
+    
+    // 長さ情報の準備
+    uint64_t aad_len = additionalData.size() * 8;  // ビット単位
+    uint64_t cipher_len = cipherText.size() * 8;   // ビット単位
+    
+    std::vector<uint8_t> length_block(16, 0);
+    // ビッグエンディアンで長さを格納
+    for (int i = 7; i >= 0; --i) {
+        length_block[7 - i] = (aad_len >> (i * 8)) & 0xFF;
+        length_block[15 - i] = (cipher_len >> (i * 8)) & 0xFF;
+    }
+    
+    // GHASH計算用のデータを準備
+    std::vector<uint8_t> ghash_data;
+    ghash_data.insert(ghash_data.end(), additionalData.begin(), additionalData.end());
+    
+    // AADのパディング
+    size_t aad_padding = (16 - (additionalData.size() % 16)) % 16;
+    ghash_data.insert(ghash_data.end(), aad_padding, 0);
+    
+    ghash_data.insert(ghash_data.end(), cipherText.begin(), cipherText.end());
+    
+    // 暗号文のパディング
+    size_t cipher_padding = (16 - (cipherText.size() % 16)) % 16;
+    ghash_data.insert(ghash_data.end(), cipher_padding, 0);
+    
+    ghash_data.insert(ghash_data.end(), length_block.begin(), length_block.end());
+    
+    // GHASH計算
+    std::vector<uint8_t> ghash_result = ghash(h, ghash_data);
+    
+    // J0の生成（IVが96ビットの場合）
+    std::vector<uint8_t> j0 = iv;
+    j0.insert(j0.end(), {0, 0, 0, 1});  // 32ビットのカウンター（初期値1）
+    
+    // 認証タグの生成
+    std::vector<uint8_t> auth_tag;
+    if (aesniSupported) {
+        __m128i j0_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j0.data()));
+        __m128i encrypted_j0 = encryptBlock(j0_block);
+        __m128i ghash_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(ghash_result.data()));
+        __m128i tag_block = _mm_xor_si128(encrypted_j0, ghash_block);
+        
+        auth_tag.resize(16);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(auth_tag.data()), tag_block);
+    } else {
+        std::vector<uint8_t> encrypted_j0 = cipher(j0);
+        auth_tag = xorVectors(encrypted_j0, ghash_result);
+    }
+    
+    // 結果の構築: IV + 暗号文 + 認証タグ
+    std::vector<uint8_t> result;
+    result.insert(result.end(), iv.begin(), iv.end());
+    result.insert(result.end(), cipherText.begin(), cipherText.end());
+    result.insert(result.end(), auth_tag.begin(), auth_tag.end());
+    
+    return result;
+}
+
+// GCMモードで復号化
+std::vector<uint8_t> AES::decrypt_gcm(const std::vector<uint8_t>& cipherText) {
+    if (cipherText.size() < gcmIvSize + gcmTagSize) {
+        throw std::invalid_argument("Invalid GCM cipher text length");
+    }
+    
+    // IV、暗号文、認証タグを分離
+    std::vector<uint8_t> iv(cipherText.begin(), cipherText.begin() + gcmIvSize);
+    std::vector<uint8_t> encrypted_data(
+        cipherText.begin() + gcmIvSize, 
+        cipherText.end() - gcmTagSize
+    );
+    std::vector<uint8_t> received_tag(
+        cipherText.end() - gcmTagSize, 
+        cipherText.end()
+    );
+    
+    // ハッシュサブキーHを生成
+    std::vector<uint8_t> zero_block(16, 0);
+    std::vector<uint8_t> h;
+    
+    if (aesniSupported) {
+        __m128i zero = _mm_setzero_si128();
+        __m128i h_block = encryptBlock(zero);
+        h.resize(16);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(h.data()), h_block);
+    } else {
+        h = cipher(zero_block);
+    }
+    
+    // 認証の検証
+    std::vector<uint8_t> additionalData;  // 空のAAD
+    
+    uint64_t aad_len = additionalData.size() * 8;
+    uint64_t cipher_len = encrypted_data.size() * 8;
+    
+    std::vector<uint8_t> length_block(16, 0);
+    for (int i = 7; i >= 0; --i) {
+        length_block[7 - i] = (aad_len >> (i * 8)) & 0xFF;
+        length_block[15 - i] = (cipher_len >> (i * 8)) & 0xFF;
+    }
+    
+    std::vector<uint8_t> ghash_data;
+    ghash_data.insert(ghash_data.end(), additionalData.begin(), additionalData.end());
+    
+    size_t aad_padding = (16 - (additionalData.size() % 16)) % 16;
+    ghash_data.insert(ghash_data.end(), aad_padding, 0);
+    
+    ghash_data.insert(ghash_data.end(), encrypted_data.begin(), encrypted_data.end());
+    
+    size_t cipher_padding = (16 - (encrypted_data.size() % 16)) % 16;
+    ghash_data.insert(ghash_data.end(), cipher_padding, 0);
+    
+    ghash_data.insert(ghash_data.end(), length_block.begin(), length_block.end());
+    
+    std::vector<uint8_t> ghash_result = ghash(h, ghash_data);
+    
+    // J0の生成
+    std::vector<uint8_t> j0 = iv;
+    j0.insert(j0.end(), {0, 0, 0, 1});
+    
+    // 期待される認証タグの計算
+    std::vector<uint8_t> expected_tag;
+    if (aesniSupported) {
+        __m128i j0_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(j0.data()));
+        __m128i encrypted_j0 = encryptBlock(j0_block);
+        __m128i ghash_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(ghash_result.data()));
+        __m128i tag_block = _mm_xor_si128(encrypted_j0, ghash_block);
+        
+        expected_tag.resize(16);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(expected_tag.data()), tag_block);
+    } else {
+        std::vector<uint8_t> encrypted_j0 = cipher(j0);
+        expected_tag = xorVectors(encrypted_j0, ghash_result);
+    }
+    
+    // 認証タグの検証
+    if (received_tag != expected_tag) {
+        throw std::runtime_error("GCM authentication failed");
+    }
+    
+    // CTRモードで復号化
+    return decryptGCM_ctr(encrypted_data, iv, 2);
+}
+
+// CTRモードでの暗号化（GCM用）
+std::vector<uint8_t> AES::encryptGCM_ctr(const std::vector<uint8_t>& plainText, const std::vector<uint8_t>& iv, uint32_t counterStart) {
+    if (plainText.empty()) return {};
+    
+    std::vector<uint8_t> result;
+    result.reserve(plainText.size());
+    
+    uint32_t counter = counterStart;
+    
+    for (size_t i = 0; i < plainText.size(); i += 16) {
+        // カウンターブロックの生成
+        std::vector<uint8_t> counterBlock = generateCounterBlock(iv, counter++);
+        
+        // カウンターブロックを暗号化
+        std::vector<uint8_t> encryptedCounter;
+        if (aesniSupported) {
+            __m128i cb = _mm_loadu_si128(reinterpret_cast<const __m128i*>(counterBlock.data()));
+            __m128i encrypted_cb = encryptBlock(cb);
+            encryptedCounter.resize(16);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(encryptedCounter.data()), encrypted_cb);
+        } else {
+            encryptedCounter = cipher(counterBlock);
+        }
+        
+        // 平文とXOR
+        size_t bytes_to_process = std::min(static_cast<size_t>(16), plainText.size() - i);
+        for (size_t j = 0; j < bytes_to_process; ++j) {
+            result.push_back(plainText[i + j] ^ encryptedCounter[j]);
+        }
+    }
+    
+    return result;
+}
+
+// CTRモードでの復号化（GCM用）
+std::vector<uint8_t> AES::decryptGCM_ctr(const std::vector<uint8_t>& cipherText, const std::vector<uint8_t>& iv, uint32_t counterStart) {
+    // CTRモードでは暗号化と復号化は同じ操作
+    return encryptGCM_ctr(cipherText, iv, counterStart);
+}
+
+// カウンターブロックの生成
+std::vector<uint8_t> AES::generateCounterBlock(const std::vector<uint8_t>& iv, uint32_t counter) {
+    std::vector<uint8_t> counterBlock = iv;  // IVをコピー（12バイト）
+    
+    // 32ビットカウンターを追加（ビッグエンディアン）
+    counterBlock.push_back((counter >> 24) & 0xFF);
+    counterBlock.push_back((counter >> 16) & 0xFF);
+    counterBlock.push_back((counter >> 8) & 0xFF);
+    counterBlock.push_back(counter & 0xFF);
+    
+    return counterBlock;
+}
+
+// GF(2^128)での乗算
+std::vector<uint8_t> AES::gfMultiply(const std::vector<uint8_t>& x, const std::vector<uint8_t>& y) {
+    std::vector<uint8_t> result(16, 0);
+    std::vector<uint8_t> v = y;
+    
+    for (int i = 0; i < 128; ++i) {
+        // x の i番目のビットが1の場合
+        if ((x[i / 8] >> (7 - (i % 8))) & 1) {
+            for (int j = 0; j < 16; ++j) {
+                result[j] ^= v[j];
+            }
+        }
+        
+        // v を左に1ビットシフト
+        bool msb = (v[0] & 0x80) != 0;
+        for (int j = 0; j < 15; ++j) {
+            v[j] = (v[j] << 1) | ((v[j + 1] & 0x80) >> 7);
+        }
+        v[15] <<= 1;
+        
+        // MSBが1だった場合、還元多項式 0x87 でXOR
+        if (msb) {
+            v[15] ^= 0x87;
+        }
+    }
+    
+    return result;
+}
+
+// GHASH関数
+std::vector<uint8_t> AES::ghash(const std::vector<uint8_t>& h, const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> y(16, 0);
+    
+    for (size_t i = 0; i < data.size(); i += 16) {
+        // データブロックを取得
+        std::vector<uint8_t> block(data.begin() + i, data.begin() + i + 16);
+        
+        // Y_i = (Y_{i-1} ⊕ X_i) * H
+        for (int j = 0; j < 16; ++j) {
+            y[j] ^= block[j];
+        }
+        y = gfMultiply(y, h);
+    }
+    
+    return y;
+}
+
 //----------AES-NI----------
 
 // AES-NIを使用してCBCモードで暗号化
 // https://www.intel.com/content/dam/doc/white-paper/advanced-encryption-standard-new-instructions-set-paper.pdf
 // 29p AES Encryption and Decryption in CBC Mode 
-std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plain_text) {
-    if (plain_text.size() == 0) return {};
+std::vector<uint8_t> AES::encryptAESNI_cbc(const std::vector<uint8_t>& plainText) {
+    if (plainText.size() == 0) return {};
 
     // パディング追加 (PKCS#7)
-    size_t pad_len = paddingSize - (plain_text.size() % paddingSize);
-    std::vector<uint8_t> padded(plain_text.begin(), plain_text.end());
-    padded.resize(plain_text.size() + pad_len, static_cast<uint8_t>(pad_len));
-
-#ifdef _DEBUG
-    std::cout << "Padding added: " << static_cast<int>(pad_len)
-        << " bytes\nPadded data:\n";
-    for (size_t i = 0; i < plain_text.size(); ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)plain_text[i];
-        if ((i + 1) % 16 == 0) {
-            std::cout << '\n';
-        }
-        else {
-            std::cout << ' ';
-        }
-    }
-    std::cout << std::endl;
-#endif
+    std::vector<uint8_t> padded = padInput(plainText);
 
     // IV生成
     std::vector<uint8_t> iv(ivSize);
     std::random_device rd;
     std::generate(iv.begin(), iv.end(), [&]() { return rd(); });
 
-    __m128i iv_block = _mm_loadu_si128(reinterpret_cast<__m128i*>(iv.data()));
+    __m128i ivBlock = _mm_loadu_si128(reinterpret_cast<__m128i*>(iv.data()));
 
     std::vector<uint8_t> cipher(iv.size() + padded.size());
-    _mm_storeu_si128(reinterpret_cast<__m128i*>(cipher.data()), iv_block);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(cipher.data()), ivBlock);
 
     // CBC暗号化
     for (size_t i = 0; i < padded.size(); i += paddingSize) {
-        __m128i plain_block = _mm_loadu_si128(
+        __m128i plainBlock = _mm_loadu_si128(
             reinterpret_cast<const __m128i*>(padded.data() + i));
 
-        iv_block = _mm_xor_si128(plain_block, iv_block);
-        iv_block = encryptBlock(iv_block);
+        ivBlock = _mm_xor_si128(plainBlock, ivBlock);
+        ivBlock = encryptBlock(ivBlock);
 
         _mm_storeu_si128(
-            reinterpret_cast<__m128i*>(cipher.data() + iv.size() + i), iv_block);
+            reinterpret_cast<__m128i*>(cipher.data() + iv.size() + i), ivBlock);
     }
 
     return cipher;
 }
 
 // AES-NIを使用してCBCモードで復号化
-std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipher_text) {
-    if (cipher_text.size() < ivSize || (cipher_text.size() - ivSize) % Nb != 0) {
+std::vector<uint8_t> AES::decryptAESNI_cbc(const std::vector<uint8_t>& cipherText) {
+    if (cipherText.size() < ivSize || (cipherText.size() - ivSize) % Nb != 0) {
         throw std::invalid_argument("Invalid cipher length");
     }
 
     // IV抽出
-    __m128i iv_block = _mm_loadu_si128(reinterpret_cast<const __m128i*>(cipher_text.data()));
-    __m128i prev_block = iv_block;
+    __m128i ivBlock = _mm_loadu_si128(reinterpret_cast<const __m128i*>(cipherText.data()));
+    __m128i prevBlock = ivBlock;
 
-    const size_t data_len = cipher_text.size() - ivSize;
-    std::vector<uint8_t> plain(data_len);
+    const size_t dataLen = cipherText.size() - ivSize;
+    std::vector<uint8_t> plain(dataLen);
 
     // CBC復号
-    for (size_t i = ivSize; i < cipher_text.size(); i += paddingSize) {
+    for (size_t i = ivSize; i < cipherText.size(); i += paddingSize) {
         __m128i ct_block = _mm_loadu_si128(
-            reinterpret_cast<const __m128i*>(cipher_text.data() + i));
+            reinterpret_cast<const __m128i*>(cipherText.data() + i));
 
         __m128i pt_block = decryptBlock(ct_block);
-        pt_block = _mm_xor_si128(pt_block, prev_block);
+        pt_block = _mm_xor_si128(pt_block, prevBlock);
 
         _mm_storeu_si128(
             reinterpret_cast<__m128i*>(plain.data() + i - ivSize), pt_block);
 
-        prev_block = ct_block;
+        prevBlock = ct_block;
     }
 
     // パディング削除
-    size_t pad_len = plain.back();
+    size_t padLen = plain.back();
 
-    if (pad_len > paddingSize) throw std::runtime_error("Invalid padding");
+    if (padLen > paddingSize) throw std::runtime_error("Invalid padding");
 
-    plain.resize(plain.size() - pad_len);
+    plain.resize(plain.size() - padLen);
     return plain;
 }
 
@@ -633,14 +885,14 @@ inline void AES::key256Assist2(__m128i *temp1, __m128i *temp3) {
 //----------共通----------
 
 std::vector<uint8_t> AES::generateRandomBytes(size_t length) {
-    std::vector<uint8_t> random_bytes(length);
+    std::vector<uint8_t> randomBytes(length);
     std::random_device rd;
 
     for (size_t i = 0; i < length; ++i) {
-        random_bytes[i] = static_cast<uint8_t>(rd() & 0xFF);
+        randomBytes[i] = static_cast<uint8_t>(rd() & 0xFF);
     }
 
-    return random_bytes;
+    return randomBytes;
 }
 
 // XOR two vectors
@@ -660,50 +912,38 @@ std::vector<uint8_t> AES::xorVectors(const std::vector<uint8_t> &a, const std::v
 // 入力を16バイトの倍数にパディングする (PKCS7パディング)
 // Pad the input to be a multiple of 16 bytes (PKCS7 padding)
 std::vector<uint8_t> AES::padInput(const std::vector<uint8_t> &input) {
-    size_t padding_size = 16 - (input.size() % 16);
+    size_t paddingSize = 16 - (input.size() % 16);
     std::vector<uint8_t> padded = input;
-    padded.insert(padded.end(), padding_size, static_cast<uint8_t>(padding_size));
+    padded.insert(padded.end(), paddingSize, static_cast<uint8_t>(paddingSize));
 
     // デバッグ出力
-#ifdef _DEBUG
-    std::cout << "Padding added: " << static_cast<int>(padding_size)
-        << " bytes\nPadded data:\n";
-    for (size_t i = 0; i < padded.size(); ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)padded[i];
-        if ((i + 1) % 16 == 0) {
-            std::cout << '\n';
-        }
-        else {
-            std::cout << ' ';
-        }
-    }
-    std::cout << std::endl;
-#endif
+    paddingPrintHex(padded, paddingSize);
+
     return padded;
 }
 
 // 復号したテキストからパディングを削除
 // Remove padding from the decrypted text
-std::vector<uint8_t> AES::removePadding(const std::vector<uint8_t>& padded_input) {
-    if (padded_input.size() < 16) {
+std::vector<uint8_t> AES::removePadding(const std::vector<uint8_t>& paddedInput) {
+    if (paddedInput.size() < 16) {
         throw std::invalid_argument("Padded input too short");
     }
 
-    const uint8_t padding_value = padded_input.back();
-    if (padding_value == 0 || padding_value > 16) {
+    const uint8_t paddingValue = paddedInput.back();
+    if (paddingValue == 0 || paddingValue > 16) {
         throw std::invalid_argument("Invalid padding value");
     }
 
     // 全パディングバイトをチェック
-    const size_t padding_start = padded_input.size() - padding_value;
+    const size_t paddingStart = paddedInput.size() - paddingValue;
 
     // デバッグ情報出力
 #ifdef _DEBUG
-    std::cerr << "Padding value detected: " << static_cast<int>(padding_value)
+    std::cerr << "Padding value detected: " << static_cast<int>(paddingValue)
         << "\nLast 16 bytes:\n";
-    for (size_t i = (padded_input.size() < 16) ? 0 : padded_input.size() - 16;
-        i < padded_input.size(); ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)padded_input[i];
+    for (size_t i = (paddedInput.size() < 16) ? 0 : paddedInput.size() - 16;
+        i < paddedInput.size(); ++i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)paddedInput[i];
         if ((i + 1) % 16 == 0) {
             std::cout << '\n';
         }
@@ -711,16 +951,17 @@ std::vector<uint8_t> AES::removePadding(const std::vector<uint8_t>& padded_input
             std::cout << ' ';
         }
     }
-    for (size_t i = padding_start; i < padded_input.size(); ++i) {
-        if (padded_input[i] != padding_value) {
+    for (size_t i = paddingStart; i < paddedInput.size(); ++i) {
+        if (paddedInput[i] != paddingValue) {
             throw std::invalid_argument("Padding byte mismatch");
         }
     }
+    std::cout << std::dec;
 #endif
 
     return std::vector<uint8_t>(
-        padded_input.begin(),
-        padded_input.begin() + padding_start
+        paddedInput.begin(),
+        paddedInput.begin() + paddingStart
     );
 }
 
@@ -777,3 +1018,18 @@ void AES::secureZeroMemory(void* ptr, size_t len) {
     }
 }
 
+void AES::paddingPrintHex(const std::vector<uint8_t> &data, const size_t& dataSize) const {
+    #ifdef _DEBUG
+        std::cout << "Padding added: " << static_cast<int>(dataSize) << " bytes\nPadded data:\n";
+        for (size_t i = 0; i < data.size(); ++i) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)data[i];
+            if ((i + 1) % 16 == 0) {
+                std::cout << '\n';
+            }
+            else {
+                std::cout << ' ';
+            }
+        }
+        std::cout << std::dec << std::endl;
+    #endif
+}
