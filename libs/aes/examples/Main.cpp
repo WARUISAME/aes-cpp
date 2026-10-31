@@ -372,11 +372,23 @@ bool testDifferentKeySizes() {
             std::vector<uint8_t> cipher_gcm_ni = aesNi.encrypt_gcm(plaintext);
             std::vector<uint8_t> decrypted_gcm_ni = aesNi.decrypt_gcm(cipher_gcm_ni);
 
+            // GCM-SIV テスト (AES-192はスキップ)
+            bool gcm_siv_ok = true;
+            if (keySize != 24) {
+                std::vector<uint8_t> cipher_siv_soft = aesSoft.encrypt_gcm_siv(plaintext);
+                std::vector<uint8_t> decrypted_siv_soft = aesSoft.decrypt_gcm_siv(cipher_siv_soft);
+
+                std::vector<uint8_t> cipher_siv_ni = aesNi.encrypt_gcm_siv(plaintext);
+                std::vector<uint8_t> decrypted_siv_ni = aesNi.decrypt_gcm_siv(cipher_siv_ni);
+
+                gcm_siv_ok = (decrypted_siv_soft == plaintext && decrypted_siv_ni == plaintext);
+            }
+
             // 検証
             bool cbc_ok = (decrypted_cbc_soft == plaintext && decrypted_cbc_ni == plaintext);
             bool gcm_ok = (decrypted_gcm_soft == plaintext && decrypted_gcm_ni == plaintext);
 
-            if (cbc_ok && gcm_ok) {
+            if (cbc_ok && gcm_ok && gcm_siv_ok) {
                 std::cout << "  AES-" << (keySize * 8) << ": PASS" << std::endl;
             }
             else {
@@ -518,10 +530,9 @@ bool testErrorConditions() {
     std::cout << "\nTesting CBC invalid padding..." << std::endl;
     try {
         auto cipher = aes.encrypt_cbc(plainText);
-        if (cipher.size() > 16) {
-            // 最後のブロックの最後のバイトを改ざん（パディング破壊）
-            cipher[cipher.size() - 1] = 0xFF;
-        }
+        // Alter the previous block (or IV) to force the final padding byte to zero.
+        const uint8_t pad = static_cast<uint8_t>(16 - plainText.size() % 16);
+        cipher[cipher.size() - 17] ^= pad;
 
         try {
             aes.decrypt_cbc(cipher);
@@ -613,6 +624,268 @@ bool testSpecialDataPatterns() {
             std::cout << "  " << pattern.name << ": ERROR - " << e.what() << std::endl;
             allPassed = false;
         }
+    }
+
+    return allPassed;
+}
+
+// ========================================
+// GCM-SIVモードのテスト (RFC 8452)
+// ========================================
+bool testGCMSIV() {
+    std::cout << "\n\n=== TEST CASE: GCM-SIV MODE (RFC 8452) ===" << std::endl;
+
+    bool allPassed = true;
+
+    // --- AES-128-GCM-SIV テスト ---
+    std::cout << "\n--- AES-128-GCM-SIV ---" << std::endl;
+    {
+        std::vector<uint8_t> key128(16);
+        std::random_device rd;
+        for (size_t i = 0; i < 16; ++i) {
+            key128[i] = static_cast<uint8_t>(rd() & 0xFF);
+        }
+
+        AES aesSoft128(key128, false);
+        AES aesNi128(key128, true);
+
+        std::vector<std::string> testPlaintexts = {
+            "",                                    // 空文字列
+            "Hello, GCM-SIV!",                     // 短い文字列
+            "A",                                   // 1文字
+            "This is exactly 16 bytes!",            // ブロック境界テスト
+            "the magic words are squeamish ossifrage To know is to know that you know nothing That is the true meaning of knowledge",
+        };
+
+        for (size_t idx = 0; idx < testPlaintexts.size(); ++idx) {
+            const std::string& testText = testPlaintexts[idx];
+            std::cout << "\n  AES-128-GCM-SIV Test " << (idx + 1) << ": ";
+            if (testText.empty()) {
+                std::cout << "(Empty string)";
+            } else if (testText.length() > 40) {
+                std::cout << testText.substr(0, 37) << "...";
+            } else {
+                std::cout << testText;
+            }
+            std::cout << " (" << testText.length() << " bytes)" << std::endl;
+
+            std::vector<uint8_t> pt(testText.begin(), testText.end());
+
+            try {
+                // ソフトウェア実装テスト
+                std::cout << "    Software encrypt/decrypt... ";
+                std::vector<uint8_t> ct = aesSoft128.encrypt_gcm_siv(pt);
+                std::vector<uint8_t> dt = aesSoft128.decrypt_gcm_siv(ct);
+                std::string recovered(reinterpret_cast<const char*>(dt.data()), dt.size());
+                if (recovered == testText) {
+                    std::cout << "PASS" << std::endl;
+                } else {
+                    std::cout << "FAIL (mismatch)" << std::endl;
+                    allPassed = false;
+                }
+
+                // AES-NI実装テスト
+                std::cout << "    AES-NI encrypt/decrypt... ";
+                std::vector<uint8_t> ct_ni = aesNi128.encrypt_gcm_siv(pt);
+                std::vector<uint8_t> dt_ni = aesNi128.decrypt_gcm_siv(ct_ni);
+                std::string recovered_ni(reinterpret_cast<const char*>(dt_ni.data()), dt_ni.size());
+                if (recovered_ni == testText) {
+                    std::cout << "PASS" << std::endl;
+                } else {
+                    std::cout << "FAIL (mismatch)" << std::endl;
+                    allPassed = false;
+                }
+
+                // 相互運用性テスト
+                std::cout << "    Cross-compat (Software->AES-NI)... ";
+                try {
+                    std::vector<uint8_t> cross1 = aesNi128.decrypt_gcm_siv(ct);
+                    std::string crossR1(reinterpret_cast<const char*>(cross1.data()), cross1.size());
+                    if (crossR1 == testText) {
+                        std::cout << "PASS" << std::endl;
+                    } else {
+                        std::cout << "FAIL (mismatch)" << std::endl;
+                        allPassed = false;
+                    }
+                } catch (const std::exception& e) {
+                    std::cout << "FAIL (" << e.what() << ")" << std::endl;
+                    allPassed = false;
+                }
+
+                std::cout << "    Cross-compat (AES-NI->Software)... ";
+                try {
+                    std::vector<uint8_t> cross2 = aesSoft128.decrypt_gcm_siv(ct_ni);
+                    std::string crossR2(reinterpret_cast<const char*>(cross2.data()), cross2.size());
+                    if (crossR2 == testText) {
+                        std::cout << "PASS" << std::endl;
+                    } else {
+                        std::cout << "FAIL (mismatch)" << std::endl;
+                        allPassed = false;
+                    }
+                } catch (const std::exception& e) {
+                    std::cout << "FAIL (" << e.what() << ")" << std::endl;
+                    allPassed = false;
+                }
+
+                // 改ざん検出テスト
+                if (!testText.empty() && ct.size() > 16) {
+                    std::cout << "    Tamper detection... ";
+                    std::vector<uint8_t> tampered = ct;
+                    tampered[14] ^= 0x01;  // 暗号文を改ざん
+                    try {
+                        aesSoft128.decrypt_gcm_siv(tampered);
+                        std::cout << "FAIL (tampered data accepted)" << std::endl;
+                        allPassed = false;
+                    } catch (const std::runtime_error&) {
+                        std::cout << "PASS (tamper detected)" << std::endl;
+                    }
+                }
+
+            } catch (const std::exception& e) {
+                std::cout << "    ERROR: " << e.what() << std::endl;
+                allPassed = false;
+            }
+        }
+    }
+
+    // --- AES-256-GCM-SIV テスト ---
+    std::cout << "\n--- AES-256-GCM-SIV ---" << std::endl;
+    {
+        std::vector<uint8_t> key256(32);
+        std::random_device rd;
+        for (size_t i = 0; i < 32; ++i) {
+            key256[i] = static_cast<uint8_t>(rd() & 0xFF);
+        }
+
+        AES aesSoft256(key256, false);
+        AES aesNi256(key256, true);
+
+        std::string testText = "AES-256-GCM-SIV encryption test with longer data for thorough testing";
+        std::vector<uint8_t> pt(testText.begin(), testText.end());
+
+        try {
+            std::cout << "  Software encrypt/decrypt... ";
+            std::vector<uint8_t> ct = aesSoft256.encrypt_gcm_siv(pt);
+            std::vector<uint8_t> dt = aesSoft256.decrypt_gcm_siv(ct);
+            std::string recovered(reinterpret_cast<const char*>(dt.data()), dt.size());
+            if (recovered == testText) {
+                std::cout << "PASS" << std::endl;
+            } else {
+                std::cout << "FAIL" << std::endl;
+                allPassed = false;
+            }
+
+            std::cout << "  AES-NI encrypt/decrypt... ";
+            std::vector<uint8_t> ct_ni = aesNi256.encrypt_gcm_siv(pt);
+            std::vector<uint8_t> dt_ni = aesNi256.decrypt_gcm_siv(ct_ni);
+            std::string recovered_ni(reinterpret_cast<const char*>(dt_ni.data()), dt_ni.size());
+            if (recovered_ni == testText) {
+                std::cout << "PASS" << std::endl;
+            } else {
+                std::cout << "FAIL" << std::endl;
+                allPassed = false;
+            }
+
+            // 相互運用性テスト
+            std::cout << "  Cross-compat (Software->AES-NI)... ";
+            try {
+                std::vector<uint8_t> cross1 = aesNi256.decrypt_gcm_siv(ct);
+                std::string crossR1(reinterpret_cast<const char*>(cross1.data()), cross1.size());
+                std::cout << (crossR1 == testText ? "PASS" : "FAIL") << std::endl;
+                if (crossR1 != testText) allPassed = false;
+            } catch (const std::exception& e) {
+                std::cout << "FAIL (" << e.what() << ")" << std::endl;
+                allPassed = false;
+            }
+
+            std::cout << "  Cross-compat (AES-NI->Software)... ";
+            try {
+                std::vector<uint8_t> cross2 = aesSoft256.decrypt_gcm_siv(ct_ni);
+                std::string crossR2(reinterpret_cast<const char*>(cross2.data()), cross2.size());
+                std::cout << (crossR2 == testText ? "PASS" : "FAIL") << std::endl;
+                if (crossR2 != testText) allPassed = false;
+            } catch (const std::exception& e) {
+                std::cout << "FAIL (" << e.what() << ")" << std::endl;
+                allPassed = false;
+            }
+
+        } catch (const std::exception& e) {
+            std::cout << "  ERROR: " << e.what() << std::endl;
+            allPassed = false;
+        }
+    }
+
+    // --- AES-192 非対応テスト ---
+    std::cout << "\n--- AES-192-GCM-SIV (should reject) ---" << std::endl;
+    {
+        std::vector<uint8_t> key192(24, 0x42);
+        AES aes192(key192, false);
+        std::vector<uint8_t> pt = {0x01, 0x02, 0x03};
+        try {
+            aes192.encrypt_gcm_siv(pt);
+            std::cout << "  FAIL (AES-192 should have been rejected)" << std::endl;
+            allPassed = false;
+        } catch (const std::invalid_argument&) {
+            std::cout << "  PASS (AES-192 correctly rejected)" << std::endl;
+        }
+    }
+
+    // --- AAD（追加認証データ）テスト ---
+    std::cout << "\n--- GCM-SIV with AAD ---" << std::endl;
+    {
+        std::vector<uint8_t> key(32);
+        std::random_device rd;
+        for (size_t i = 0; i < 32; ++i) {
+            key[i] = static_cast<uint8_t>(rd() & 0xFF);
+        }
+        AES aes(key, false);
+
+        std::string testText = "Authenticated message";
+        std::vector<uint8_t> pt(testText.begin(), testText.end());
+        std::vector<uint8_t> aad = {0x01, 0x02, 0x03, 0x04, 0x05};
+
+        try {
+            std::cout << "  Encrypt with AAD, decrypt with same AAD... ";
+            std::vector<uint8_t> ct = aes.encrypt_gcm_siv(pt, aad);
+            std::vector<uint8_t> dt = aes.decrypt_gcm_siv(ct, aad);
+            std::string recovered(reinterpret_cast<const char*>(dt.data()), dt.size());
+            if (recovered == testText) {
+                std::cout << "PASS" << std::endl;
+            } else {
+                std::cout << "FAIL" << std::endl;
+                allPassed = false;
+            }
+
+            // 異なるAADで復号（認証失敗すべき）
+            std::cout << "  Decrypt with wrong AAD... ";
+            std::vector<uint8_t> wrongAad = {0x01, 0x02, 0x03, 0x04, 0x06};
+            try {
+                aes.decrypt_gcm_siv(ct, wrongAad);
+                std::cout << "FAIL (wrong AAD accepted)" << std::endl;
+                allPassed = false;
+            } catch (const std::runtime_error&) {
+                std::cout << "PASS (correctly rejected)" << std::endl;
+            }
+
+            // AADなしで復号（認証失敗すべき）
+            std::cout << "  Decrypt without AAD (encrypted with AAD)... ";
+            try {
+                aes.decrypt_gcm_siv(ct);
+                std::cout << "FAIL (missing AAD accepted)" << std::endl;
+                allPassed = false;
+            } catch (const std::runtime_error&) {
+                std::cout << "PASS (correctly rejected)" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  ERROR: " << e.what() << std::endl;
+            allPassed = false;
+        }
+    }
+
+    if (allPassed) {
+        std::cout << "\nGCM-SIV Mode: All tests PASSED!" << std::endl;
+    } else {
+        std::cout << "\nGCM-SIV Mode: Some tests FAILED!" << std::endl;
     }
 
     return allPassed;
@@ -733,20 +1006,19 @@ bool testNISTVectors() {
             std::cout << "  AES-NI implementation... ";
             AES aesNi(key, true);
 
-            // AES-NIでは直接的なブロック暗号化のテストが難しいため、
-            // 代わりにCBCモードでの互換性をテスト
-            std::vector<uint8_t> testData = plaintext;
+            std::vector<uint8_t> cipherNi = aesNi.cipher(plaintext);
+            std::vector<uint8_t> decryptedNi = aesNi.invCipher(cipherNi);
+            bool niEncryptOk = (cipherNi == expectedCipher);
+            bool niDecryptOk = (decryptedNi == plaintext);
 
-            std::vector<uint8_t> cipherNi = aesNi.encrypt_cbc(testData);
-            std::vector<uint8_t> decryptedNi = aesNi.decrypt_cbc(cipherNi);
-
-            bool niDecrypt_ok = (decryptedNi == testData);
-
-            if (niDecrypt_ok) {
-                std::cout << "PASS (CBC mode compatibility)" << std::endl;
+            if (niEncryptOk && niDecryptOk) {
+                std::cout << "PASS" << std::endl;
             }
             else {
-                std::cout << "FAIL (CBC mode compatibility)" << std::endl;
+                std::cout << "FAIL";
+                if (!niEncryptOk) std::cout << " (encrypt mismatch)";
+                if (!niDecryptOk) std::cout << " (decrypt mismatch)";
+                std::cout << std::endl;
                 allPassed = false;
             }
 
@@ -755,6 +1027,41 @@ bool testNISTVectors() {
             std::cout << "  ERROR: " << e.what() << std::endl;
             allPassed = false;
         }
+    }
+
+    // 公開ブロックAPIは正確に16バイトの入力のみ受け付ける。
+    std::cout << "\nTesting block-size validation..." << std::endl;
+    const std::vector<size_t> invalidBlockSizes = {0, 15, 17};
+    const std::vector<uint8_t> validationKey(16, 0);
+    for (bool useAesNi : {false, true}) {
+        AES aes(validationKey, useAesNi);
+        bool rejectedAll = true;
+
+        for (size_t size : invalidBlockSizes) {
+            const std::vector<uint8_t> invalidBlock(size, 0);
+            bool cipherRejected = false;
+            bool invCipherRejected = false;
+
+            try {
+                aes.cipher(invalidBlock);
+            }
+            catch (const std::invalid_argument&) {
+                cipherRejected = true;
+            }
+
+            try {
+                aes.invCipher(invalidBlock);
+            }
+            catch (const std::invalid_argument&) {
+                invCipherRejected = true;
+            }
+
+            rejectedAll &= cipherRejected && invCipherRejected;
+        }
+
+        std::cout << "  " << (useAesNi ? "AES-NI" : "Software") << ": "
+                  << (rejectedAll ? "PASS" : "FAIL") << std::endl;
+        allPassed &= rejectedAll;
     }
 
     return allPassed;
@@ -856,27 +1163,114 @@ bool testGCMNISTVectors() {
             std::vector<uint8_t> expectedCipher = hexStringToBytes(vector.expected_cipher_hex);
             std::vector<uint8_t> expectedTag = hexStringToBytes(vector.expected_tag_hex);
 
-            // このテストは実装の複雑さのため、基本的なGCM動作のみ確認
-            std::cout << "  Basic GCM functionality... ";
+            std::vector<uint8_t> aad = hexStringToBytes(vector.aad_hex);
+            std::vector<uint8_t> authenticatedCipher = iv;
+            authenticatedCipher.insert(authenticatedCipher.end(), expectedCipher.begin(), expectedCipher.end());
+            authenticatedCipher.insert(authenticatedCipher.end(), expectedTag.begin(), expectedTag.end());
 
-            AES aesSoft(key, false);
-            std::vector<uint8_t> gcm_result = aesSoft.encrypt_gcm(plaintext);
-            std::vector<uint8_t> gcm_decrypted = aesSoft.decrypt_gcm(gcm_result);
+            for (bool useAesNi : {false, true}) {
+                std::cout << "  " << (useAesNi ? "AES-NI" : "Software") << " decrypt... ";
+                AES aes(key, useAesNi);
+                std::vector<uint8_t> decrypted = aes.decrypt_gcm(authenticatedCipher, aad);
 
-            bool basic_test_ok = (gcm_decrypted == plaintext);
-
-            if (basic_test_ok) {
-                std::cout << "PASS (basic encrypt/decrypt)" << std::endl;
-            }
-            else {
-                std::cout << "FAIL (basic encrypt/decrypt)" << std::endl;
-                allPassed = false;
+                if (decrypted == plaintext) {
+                    std::cout << "PASS" << std::endl;
+                }
+                else {
+                    std::cout << "FAIL (plaintext mismatch)" << std::endl;
+                    allPassed = false;
+                }
             }
 
         }
         catch (const std::exception& e) {
             std::cout << "  ERROR: " << e.what() << std::endl;
             allPassed = false;
+        }
+    }
+
+    return allPassed;
+}
+
+// ========================================
+// RFC 8452 GCM-SIVテストベクター
+// ========================================
+bool testGCMSIVRFCVectors() {
+    std::cout << "\n=== GCM-SIV RFC 8452 TEST VECTORS ===" << std::endl;
+    bool allPassed = true;
+
+    struct GCMSIVTestVector {
+        std::string name;
+        std::string keyHex;
+        std::string nonceHex;
+        std::string plaintextHex;
+        std::string aadHex;
+        std::string resultHex;
+    };
+
+    const std::vector<GCMSIVTestVector> vectors = {
+        {
+            "AES-128, 8-byte plaintext, empty AAD",
+            "01000000000000000000000000000000",
+            "030000000000000000000000",
+            "0100000000000000",
+            "",
+            "b5d839330ac7b786578782fff6013b815b287c22493a364c"
+        },
+        {
+            "AES-128, 8-byte plaintext, 1-byte AAD",
+            "01000000000000000000000000000000",
+            "030000000000000000000000",
+            "0200000000000000",
+            "01",
+            "1e6daba35669f4273b0a1a2560969cdf790d99759abd1508"
+        },
+        {
+            "AES-256, 8-byte plaintext, empty AAD",
+            "0100000000000000000000000000000000000000000000000000000000000000",
+            "030000000000000000000000",
+            "0100000000000000",
+            "",
+            "c2ef328e5c71c83b843122130f7364b761e0b97427e3df28"
+        },
+        {
+            "AES-256, 8-byte plaintext, 1-byte AAD",
+            "0100000000000000000000000000000000000000000000000000000000000000",
+            "030000000000000000000000",
+            "0200000000000000",
+            "01",
+            "1de22967237a813291213f267e3b452f02d01ae33e4ec854"
+        }
+    };
+
+    for (const auto& vector : vectors) {
+        std::cout << "\nTesting: " << vector.name << std::endl;
+        const std::vector<uint8_t> key = hexStringToBytes(vector.keyHex);
+        const std::vector<uint8_t> nonce = hexStringToBytes(vector.nonceHex);
+        const std::vector<uint8_t> plaintext = hexStringToBytes(vector.plaintextHex);
+        const std::vector<uint8_t> aad = hexStringToBytes(vector.aadHex);
+        const std::vector<uint8_t> result = hexStringToBytes(vector.resultHex);
+
+        std::vector<uint8_t> serializedCipher = nonce;
+        serializedCipher.insert(serializedCipher.end(), result.begin(), result.end());
+
+        for (bool useAesNi : {false, true}) {
+            std::cout << "  " << (useAesNi ? "AES-NI" : "Software") << " decrypt... ";
+            try {
+                AES aes(key, useAesNi);
+                const std::vector<uint8_t> decrypted = aes.decrypt_gcm_siv(serializedCipher, aad);
+                if (decrypted == plaintext) {
+                    std::cout << "PASS" << std::endl;
+                }
+                else {
+                    std::cout << "FAIL (plaintext mismatch)" << std::endl;
+                    allPassed = false;
+                }
+            }
+            catch (const std::exception& e) {
+                std::cout << "FAIL (" << e.what() << ")" << std::endl;
+                allPassed = false;
+            }
         }
     }
 
@@ -890,6 +1284,7 @@ int main() {
     // 基本機能テスト
     finalResult &= testBasicCBC();
     finalResult &= testGCM();
+    finalResult &= testGCMSIV();
     finalResult &= testDifferentKeySizes();
     finalResult &= testLargeDataSets();
     finalResult &= testErrorConditions();
@@ -899,6 +1294,7 @@ int main() {
     finalResult &= testNISTVectors();
     finalResult &= testNISTMonteCarlo();
     finalResult &= testGCMNISTVectors();
+    finalResult &= testGCMSIVRFCVectors();
 
     if (finalResult) {
         std::cout << "\n=== ALL TESTS PASSED! ===" << std::endl;

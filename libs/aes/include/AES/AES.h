@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <random>
 #include <cstring>
+#include <array>
 
 // AES-NI
 #include <immintrin.h>
@@ -27,6 +28,7 @@
 class AES {
 public:
     AES(const std::vector<uint8_t>& cipherKey, const bool aesniflag = true);
+    AES(const AES& other);
 
     ~AES();
 
@@ -37,16 +39,34 @@ public:
     std::vector<uint8_t> invCipher(const std::vector<uint8_t>& inputBytes);
 
     // Encrypt using CBC mode
+    // CBC has no authentication; use GCM/GCM-SIV for untrusted messages.
     std::vector<uint8_t> encrypt_cbc(const std::vector<uint8_t>& plainText);
 
     // Decrypt using CBC mode
     std::vector<uint8_t> decrypt_cbc(const std::vector<uint8_t>& cipherText);
 
     // Encrypt using GCM mode
-    std::vector<uint8_t> encrypt_gcm(const std::vector<uint8_t>& plainText);
+    std::vector<uint8_t> encrypt_gcm(const std::vector<uint8_t>& plainText,
+                                      const std::vector<uint8_t>& additionalData = {});
+
+    // Returns nonce || ciphertext || tag, like encrypt_gcm.
+    // The caller MUST use a unique 12-byte nonce for every message under a key.
+    std::vector<uint8_t> encrypt_gcm_with_nonce(const std::vector<uint8_t>& plainText,
+                                      const std::vector<uint8_t>& nonce,
+                                      const std::vector<uint8_t>& additionalData = {});
 
     // Decrypt using GCM mode
-    std::vector<uint8_t> decrypt_gcm(const std::vector<uint8_t>& cipherText);
+    std::vector<uint8_t> decrypt_gcm(const std::vector<uint8_t>& cipherText,
+                                      const std::vector<uint8_t>& additionalData = {});
+
+    // Encrypt using GCM-SIV mode (RFC 8452)
+    // AES-128 and AES-256 only (AES-192 is not defined for GCM-SIV)
+    std::vector<uint8_t> encrypt_gcm_siv(const std::vector<uint8_t>& plainText,
+                                          const std::vector<uint8_t>& additionalData = {});
+
+    // Decrypt using GCM-SIV mode (RFC 8452)
+    std::vector<uint8_t> decrypt_gcm_siv(const std::vector<uint8_t>& cipherText,
+                                          const std::vector<uint8_t>& additionalData = {});
 
 private:
     // --- ソフトウェア実装の関数 ---
@@ -70,7 +90,7 @@ private:
     State invMixColumns(const State& s);
 
     // StateとRoundKeyのXOR演算
-    State addRoundKey(const State& st, const std::vector<uint32_t>& keyScheduleWords);
+    State addRoundKey(const State& st, size_t round);
     
     // 32bitのワードの各バイトにS-box置換
     uint32_t subWord(uint32_t word);
@@ -98,6 +118,27 @@ private:
     
     // GCTR関数（CTRモードの暗号化/復号化）
     std::vector<uint8_t> gctr(const std::vector<uint8_t>& icb, const std::vector<uint8_t>& data);
+
+    // --- GCM-SIV実装の関数 (RFC 8452) ---
+    
+    // POLYVAL用のGF(2^128)乗算（LE convention, reducing polynomial: x^128+x^127+x^126+x^121+1）
+    std::vector<uint8_t> polyvalMultiply(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b);
+    
+    // POLYVAL関数
+    std::vector<uint8_t> polyval(const std::vector<uint8_t>& h, const std::vector<uint8_t>& data);
+    
+    // GCM-SIV鍵導出（master keyからauth_keyとenc_keyを導出）
+    void deriveGcmSivKeys(const std::vector<uint8_t>& nonce,
+                           std::vector<uint8_t>& authKey,
+                           std::vector<uint8_t>& encKey);
+    
+    // GCM-SIV用CTRモード暗号化/復号化（tagをカウンター初期値として使用）
+    std::vector<uint8_t> gcmSivCtr(const std::vector<uint8_t>& tag,
+                                    const std::vector<uint8_t>& data,
+                                    const std::vector<uint8_t>& encKey);
+    
+    // 定数時間比較（タイミング攻撃対策）
+    bool constantTimeCompare(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b);
 
     // --- AES-NI実装の関数 ---
     
@@ -146,9 +187,6 @@ private:
     // メモリをゼロクリアする
     void secureZeroMemory(void* ptr, size_t len);
 
-    // デバック表示用
-    void paddingPrintHex(const std::vector<uint8_t>& data, const size_t& dataSize) const;
-
 private:
     // AES-NIがサポートされているか true: サポートされている false: サポートされていない
     bool aesniSupported = false;
@@ -166,9 +204,19 @@ private:
     const uint8_t ivSize = 16;      // IVのサイズ (AESは16バイトのブロックサイズを持つ)
     const uint8_t paddingSize = 16; // パディングサイズ (PKCS7パディング)
 
-    // AES-NI用の鍵スケジュール
-    std::vector<__m128i> rdKey;
-    std::vector<__m128i> decKey;
+    // Byte-backed slots avoid over-aligned allocations on pre-C++17 Win32.
+    struct RoundKey {
+        std::array<uint8_t, 16> bytes{};
+        RoundKey& operator=(__m128i value) {
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(bytes.data()), value);
+            return *this;
+        }
+        operator __m128i() const {
+            return _mm_loadu_si128(reinterpret_cast<const __m128i*>(bytes.data()));
+        }
+    };
+    std::vector<RoundKey> rdKey;
+    std::vector<RoundKey> decKey;
 
     // GCM用の定数
     const uint8_t gcmIvSize = 12;    // GCMでは96ビット（12バイト）のIVを推奨

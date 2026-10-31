@@ -29,12 +29,7 @@ jobs:
       shell: bash
       run: cmake --build . --config Release && cmake --build . --target example --config Release
 
-    - name: Run Example/Test
+    - name: Run tests
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          ./Release/example.exe
-        else
-          ./example
-        fi
+      run: ctest -C Release --output-on-failure

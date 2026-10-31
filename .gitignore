@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+.codex-remote-attachments/
+.vscode/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -17,6 +20,11 @@
 mono_crash.*
 
 # Build results
+/.deps/
+/out/
+/dist/
+/build/
+/.codex-remote-attachments/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
