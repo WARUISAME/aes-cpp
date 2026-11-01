@@ -20,8 +20,6 @@ public:
 private:
     static const uint16_t mod = 0x11b; // modulo x^8 + x^4 + x^3 + x + 1
     uint8_t coeffs;
-
-    uint16_t bitLength(uint16_t n) const;
 };
 
 // 乗法的逆元の計算

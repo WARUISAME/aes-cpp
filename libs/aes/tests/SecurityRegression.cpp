@@ -84,6 +84,48 @@ void checkAead(AES& aes, bool supportsSiv) {
     }
 }
 
+// Exercise sparse, dense and reduction-boundary inputs through both public AEAD
+// paths. Published vectors also keep two mutually wrong backends from agreeing.
+void checkAuthenticationArithmetic(bool useAesNi) {
+    AES zeroKey(std::vector<uint8_t>(16, 0), useAesNi);
+    const std::vector<uint8_t> nonce(12, 0), plain(16, 0);
+    const std::vector<uint8_t> ciphertextAndTag = {
+        0x03,0x88,0xda,0xce,0x60,0xb6,0xa3,0x92,0xf3,0x28,0xc2,0xb9,0x71,0xb2,0xfe,0x78,
+        0xab,0x6e,0x47,0xd4,0x2c,0xec,0x13,0xbd,0xf5,0x3a,0x67,0xb2,0x12,0x57,0xbd,0xdf
+    };
+    auto expected = nonce;
+    expected.insert(expected.end(), ciphertextAndTag.begin(), ciphertextAndTag.end());
+    require(zeroKey.encrypt_gcm_with_nonce(plain, nonce) == expected, "NIST GCM encryption changed");
+    require(zeroKey.decrypt_gcm(expected) == plain, "NIST GCM decryption changed");
+
+    for (size_t keySize : {size_t(16), size_t(24), size_t(32)}) {
+        for (uint8_t pattern : {uint8_t(0), uint8_t(1), uint8_t(0x80), uint8_t(0xff)}) {
+            AES sender(std::vector<uint8_t>(keySize, pattern), useAesNi);
+            AES receiver(std::vector<uint8_t>(keySize, pattern), !useAesNi);
+            for (size_t length : {size_t(0), size_t(1), size_t(15), size_t(16), size_t(17), size_t(33)}) {
+                const std::vector<uint8_t> message(length, pattern);
+                const std::vector<uint8_t> aad(33 - length, static_cast<uint8_t>(pattern ^ 0x81));
+                // The explicit nonce is unique within this test key's GCM messages.
+                std::vector<uint8_t> iv(12, pattern);
+                iv[0] = static_cast<uint8_t>(length);
+                auto encrypted = sender.encrypt_gcm_with_nonce(message, iv, aad);
+                require(receiver.decrypt_gcm(encrypted, aad) == message, "GCM arithmetic/backend mismatch");
+                auto badAad = aad;
+                badAad.push_back(pattern);
+                authenticationFails([&] { receiver.decrypt_gcm(encrypted, badAad); });
+                encrypted.back() ^= 0x80;
+                authenticationFails([&] { receiver.decrypt_gcm(encrypted, aad); });
+                if (keySize == 24) continue;
+                encrypted = sender.encrypt_gcm_siv(message, aad);
+                require(receiver.decrypt_gcm_siv(encrypted, aad) == message, "POLYVAL arithmetic/backend mismatch");
+                authenticationFails([&] { receiver.decrypt_gcm_siv(encrypted, badAad); });
+                encrypted.back() ^= 1;
+                authenticationFails([&] { receiver.decrypt_gcm_siv(encrypted, aad); });
+            }
+        }
+    }
+}
+
 void checkLengthLimits() {
     for (bool siv : {false, true}) {
         const uint64_t maxData = siv ? (1ULL << 36) : (1ULL << 36) - 32;
@@ -111,6 +153,8 @@ int main() {
         {
             Capture capture;
             checkLengthLimits();
+            checkAuthenticationArithmetic(false);
+            checkAuthenticationArithmetic(true);
             for (size_t keySize : {size_t(16), size_t(24), size_t(32)}) {
                 const std::vector<uint8_t> key(keySize, 0);
                 AES software(key, false), hardware(key, true);
