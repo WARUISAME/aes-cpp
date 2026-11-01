@@ -716,27 +716,21 @@ std::vector<uint8_t> AES::gfMultiply(const std::vector<uint8_t>& x, const std::v
     std::vector<uint8_t> v = y;
     EraseOnExit<std::vector<uint8_t>> clearFactor(v);
     
+    // Fixed work and fixed addresses for every operand, including zero.
     for (int i = 0; i < 128; ++i) {
-        // x の i番目のビットが1の場合 (MSBファースト: x_0 = MSB of first byte)
-        if ((x[i / 8] >> (7 - (i % 8))) & 1) {
-            for (int j = 0; j < 16; ++j) {
-                result[j] ^= v[j];
-            }
+        const uint8_t mask = static_cast<uint8_t>(
+            0u - ((static_cast<uint32_t>(x[i / 8]) >> (7 - (i % 8))) & 1u));
+        for (int j = 0; j < 16; ++j) {
+            result[j] ^= v[j] & mask;
         }
-        
-        // v を右に1ビットシフト (NIST GCM convention)
-        bool lsb = (v[15] & 0x01) != 0;
+
+        const uint8_t reductionMask = static_cast<uint8_t>(0u - (v[15] & 1u));
         for (int j = 15; j > 0; --j) {
             v[j] = (v[j] >> 1) | ((v[j - 1] & 0x01) << 7);
         }
-        v[0] >>= 1;
-        
-        // LSBが1だった場合、還元多項式 R = 0xE1000...0 でXOR
-        if (lsb) {
-            v[0] ^= 0xE1;
-        }
+        v[0] = static_cast<uint8_t>((v[0] >> 1) ^ (0xE1u & reductionMask));
     }
-    
+
     return result;
 }
 
@@ -771,28 +765,23 @@ std::vector<uint8_t> AES::polyvalMultiply(const std::vector<uint8_t>& a, const s
     std::vector<uint8_t> v = b;
     EraseOnExit<std::vector<uint8_t>> clearFactor(v);
     
+    // POLYVAL uses the opposite bit order to GHASH; keep its LE reduction.
+    // Neither operand bits nor the reduction carry control execution.
     for (int i = 0; i < 128; ++i) {
-        // aのi番目のビットをチェック (LE convention: byte[i/8], bit i%8)
-        if ((a[i / 8] >> (i % 8)) & 1) {
-            for (int j = 0; j < 16; ++j) {
-                result[j] ^= v[j];
-            }
+        const uint8_t mask = static_cast<uint8_t>(
+            0u - ((static_cast<uint32_t>(a[i / 8]) >> (i % 8)) & 1u));
+        for (int j = 0; j < 16; ++j) {
+            result[j] ^= v[j] & mask;
         }
-        
-        // vをxで乗算 (LEでの左シフト)
-        uint8_t carry = (v[15] >> 7) & 1;
+
+        const uint8_t reductionMask = static_cast<uint8_t>(0u - (v[15] >> 7));
         for (int j = 15; j > 0; --j) {
             v[j] = (v[j] << 1) | (v[j - 1] >> 7);
         }
-        v[0] <<= 1;
-        
-        // キャリーがあれば還元: x^127 + x^126 + x^121 + 1
-        if (carry) {
-            v[0] ^= 0x01;   // x^0 = 1
-            v[15] ^= 0xC2;  // x^127 + x^126 + x^121 = 0x80 + 0x40 + 0x02 = 0xC2
-        }
+        v[0] = static_cast<uint8_t>((v[0] << 1) ^ (0x01u & reductionMask));
+        v[15] ^= 0xC2u & reductionMask;
     }
-    
+
     return result;
 }
 
