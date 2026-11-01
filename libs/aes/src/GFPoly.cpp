@@ -2,17 +2,11 @@
 #include <cassert>
 
 GFPolynomial::GFPolynomial(uint16_t c) {
-    if (c >= 0x100) {
-        uint16_t temp_m = mod << (bitLength(c) - bitLength(mod));
-        uint16_t tar = bitLength(c);
-
-        while (c >= 0x100) {
-            if ((c >> (tar - 1)) & 1) {
-                c ^= temp_m;
-            }
-            temp_m >>= 1;
-            tar--;
-        }
+    // Reduce every possible uint16_t input in eight fixed steps.
+    // Masks and shifts depend only on public loop positions, never on coefficients.
+    for (int bit = 15; bit >= 8; --bit) {
+        const uint32_t mask = 0u - ((static_cast<uint32_t>(c) >> bit) & 1u);
+        c ^= static_cast<uint16_t>((static_cast<uint32_t>(mod) << (bit - 8)) & mask);
     }
     coeffs = c;
     assert(coeffs < mod);
@@ -40,41 +34,34 @@ GFPolynomial GFPolynomial::operator+(const GFPolynomial& rhs) const {
 }
 
 GFPolynomial GFPolynomial::operator*(const GFPolynomial& rhs) const {
-    uint16_t res = 0;
-    for (int i = 0; i < 8; ++i) {
-        for (int j = 0; j < 8; j++) {
-            if (((coeffs >> i) & 1) && ((rhs.coeffs >> j) & 1)) {
-                res ^= (1 << (i + j));
-            }
-        }
+    uint32_t a = coeffs;
+    uint32_t b = rhs.coeffs;
+    uint32_t product = 0;
+    // Carryless multiplication modulo x^8 + x^4 + x^3 + x + 1.
+    // Always process all eight bits, including zero operands.
+    for (int bit = 0; bit < 8; ++bit) {
+        product ^= a & (0u - (b & 1u));
+        a = ((a << 1) & 0xffu) ^ (0x1bu & (0u - (a >> 7)));
+        b >>= 1;
     }
-    return GFPolynomial(res);
+    return GFPolynomial(static_cast<uint16_t>(product));
 }
 
-uint16_t GFPolynomial::bitLength(uint16_t n) const {
-    uint32_t length = 0;
-    while (n > 0) {
-        length++;
-        n >>= 1;
-    }
-    return length;
-}
-
-// 乗法的逆元の計算
-std::vector<GFPolynomial> inverseTable(256, GFPolynomial(0));
-
-void initInverse() {
-    for (int i = 0; i < 256; ++i) {
-        for (int j = 0; j < 256; ++j) {
-            GFPolynomial res = GFPolynomial(i) * GFPolynomial(j);
-            if (res.getCoeffs() == 1) {
-                inverseTable[i] = GFPolynomial(j);
-                break;
-            }
-        }
-    }
-}
+// Kept for source compatibility. Inversion no longer needs shared table state.
+void initInverse() {}
 
 GFPolynomial inverse(const GFPolynomial& poly) {
-    return inverseTable[poly.getCoeffs()];
+    // Fixed addition chain for a^254 in GF(2^8). This also maps zero to zero,
+    // as required by the AES S-box, without a secret-dependent special case.
+    const GFPolynomial a2 = poly * poly;
+    const GFPolynomial a3 = a2 * poly;
+    const GFPolynomial a6 = a3 * a3;
+    const GFPolynomial a12 = a6 * a6;
+    const GFPolynomial a15 = a12 * a3;
+    const GFPolynomial a30 = a15 * a15;
+    const GFPolynomial a60 = a30 * a30;
+    const GFPolynomial a120 = a60 * a60;
+    const GFPolynomial a240 = a120 * a120;
+    const GFPolynomial a252 = a240 * a12;
+    return a252 * a2;
 }
